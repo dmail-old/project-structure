@@ -1,0 +1,35 @@
+{
+  "name": "@dmail/file-meta-pattern",
+  "version": "1.0.0",
+  "licence": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dmail/file-meta-pattern"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "dist/index.js",
+  "module": "index.js",
+  "files": ["index.js", "src", "dist"],
+  "bin": {
+    "list": "./bin/list.js"
+  },
+  "scripts": {
+    "test": "",
+    "code-compile": "node ./script/compile.js",
+    "compile": "npn run code-compile"
+  },
+  "dependencies": {
+    "ignore": "5.0.2"
+  },
+  "devDependencies": {
+    "@babel/core": "7.1.0",
+    "prettier": "1.9.1",
+    "rollup": "0.66.2",
+    "rollup-plugin-babel": "4.0.3",
+    "rollup-plugin-node-resolve": "3.4.0",
+    "@babel/plugin-proposal-object-rest-spread": "7.0.0",
+    "@babel/plugin-transform-spread": "7.0.0"
+  }
+}
