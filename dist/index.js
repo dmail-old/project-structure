@@ -123,10 +123,7 @@ const match = ({
         matched = skipResult.matched;
         patternIndex += skipResult.patternIndex;
         partIndex += skipResult.partIndex;
-
-        if (matched) {
-          matchIndex += skipResult.matchIndex;
-        }
+        matchIndex += skipResult.matchIndex;
 
         if (matched && patternIndex === patterns.length - 1) {
           break;
@@ -184,6 +181,7 @@ const match = ({
       if (matched === false && skipUntilStartsMatching && isLastPart === false) {
         partIndex++; // keep searching for that pattern
 
+        matchIndex++;
         continue;
       }
 

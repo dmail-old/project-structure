@@ -171,4 +171,11 @@ const assert = require("assert")
   assert.equal(canContainsMetaMatching("a/bZ", (meta) => meta.a), true)
 }
 
+{
+  const { addMetaAtPattern, canContainsMetaMatching } = createLocationMeta()
+  addMetaAtPattern("a/**/b.js", { a: true })
+
+  assert.equal(canContainsMetaMatching("a/b/c", (meta) => meta.a), true)
+}
+
 console.log("passed")
