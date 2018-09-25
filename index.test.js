@@ -3,45 +3,65 @@
 const { createLocationMeta } = require("./dist/index.js")
 const assert = require("assert")
 
-// {
-//   const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
-//   addMetaAtPattern("a", { a: true })
+{
+  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  addMetaAtPattern("foo", { a: true })
 
-//   assert.deepEqual(getMetaForLocation("a"), { a: true })
-//   assert.deepEqual(getMetaForLocation("a.js"), {})
-//   assert.deepEqual(getMetaForLocation("a/b"), { a: true })
-//   assert.deepEqual(getMetaForLocation("a/b.js"), { a: true })
-// }
+  assert.deepEqual(getMetaForLocation("foo"), { a: true })
+}
 
-// {
-//   const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
-//   addMetaAtPattern("a/b", { b: true })
+{
+  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  addMetaAtPattern("a", { a: true })
 
-//   assert.deepEqual(getMetaForLocation("a/b"), { b: true })
-//   assert.deepEqual(getMetaForLocation("a/b.js"), {})
-//   assert.deepEqual(getMetaForLocation("a/c"), {})
-//   assert.deepEqual(getMetaForLocation("a/b/c"), { b: true })
-// }
+  assert.deepEqual(getMetaForLocation("a"), { a: true })
+  assert.deepEqual(getMetaForLocation("a.js"), {})
+  assert.deepEqual(getMetaForLocation("a/b"), { a: true })
+  assert.deepEqual(getMetaForLocation("a/b.js"), { a: true })
+}
 
-// {
-//   const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
-//   addMetaAtPattern("*b", { b: true })
+{
+  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  addMetaAtPattern("b/a", { a: true })
 
-//   assert.deepEqual(getMetaForLocation("b"), { b: true })
-//   assert.deepEqual(getMetaForLocation("Zb"), { b: true })
-//   assert.deepEqual(getMetaForLocation("ZZZb"), { b: true })
-//   assert.deepEqual(getMetaForLocation("bZ"), {})
-// }
+  assert.deepEqual(getMetaForLocation("b/a"), { a: true })
+  assert.deepEqual(getMetaForLocation("b/a.js"), {})
+  assert.deepEqual(getMetaForLocation("b/c"), {})
+  assert.deepEqual(getMetaForLocation("b/a/c"), { a: true })
+}
 
-// {
-//   const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
-//   addMetaAtPattern("b*", { b: true })
+{
+  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  addMetaAtPattern("*a", { a: true })
 
-//   assert.deepEqual(getMetaForLocation("b"), { b: true })
-//   assert.deepEqual(getMetaForLocation("bZ"), { b: true })
-//   assert.deepEqual(getMetaForLocation("bZZZ"), { b: true })
-//   assert.deepEqual(getMetaForLocation("Zb"), {})
-// }
+  assert.deepEqual(getMetaForLocation("a"), { a: true })
+  assert.deepEqual(getMetaForLocation("Za"), { a: true })
+  assert.deepEqual(getMetaForLocation("ZZZa"), { a: true })
+  assert.deepEqual(getMetaForLocation("aZ"), {})
+}
+
+{
+  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  addMetaAtPattern("a*", { a: true })
+
+  assert.deepEqual(getMetaForLocation("a"), { a: true })
+  assert.deepEqual(getMetaForLocation("aZ"), { a: true })
+  assert.deepEqual(getMetaForLocation("aZZZ"), { a: true })
+  assert.deepEqual(getMetaForLocation("Za"), {})
+}
+
+{
+  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  addMetaAtPattern("*a*", { a: true })
+
+  assert.deepEqual(getMetaForLocation("a"), { a: true })
+  assert.deepEqual(getMetaForLocation("Za"), { a: true })
+  assert.deepEqual(getMetaForLocation("aZ"), { a: true })
+  assert.deepEqual(getMetaForLocation("ZZa"), { a: true })
+  assert.deepEqual(getMetaForLocation("aZZ"), { a: true })
+  assert.deepEqual(getMetaForLocation("ZaZ"), { a: true })
+  assert.deepEqual(getMetaForLocation("ZZaZZ"), { a: true })
+}
 
 // {
 //   const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
@@ -62,6 +82,15 @@ const assert = require("assert")
 //   assert.deepEqual(getMetaForLocation("a/b/c"), { a: true })
 //   assert.deepEqual(getMetaForLocation("a/a.js"), { a: true })
 //   assert.deepEqual(getMetaForLocation("a.js"), {})
+// }
+
+// {
+//   const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+//   addMetaAtPattern("**/a/**", { a: true })
+
+//   assert.deepEqual(getMetaForLocation("a"), {})
+//   assert.deepEqual(getMetaForLocation("a/b"), { a: true })
+//   assert.deepEqual(getMetaForLocation("b/a/c"), { a: true })
 // }
 
 // {
@@ -123,12 +152,14 @@ const assert = require("assert")
 //   assert.deepEqual(getMetaForLocation("src/exception.js"), { cover: false })
 // }
 
-{
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
-  addMetaAtPattern("prefix*suffix", { prettify: true })
+// {
+//   const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+//   addMetaAtPattern("a*bc", { a: true })
 
-  assert.deepEqual(getMetaForLocation("prefixandsuffix"), { prettify: true })
-}
+//   assert.deepEqual(getMetaForLocation("abc"), { a: true })
+//   assert.deepEqual(getMetaForLocation("aZZbc"), { a: true })
+//   assert.deepEqual(getMetaForLocation("aZZbd"), {})
+// }
 
 // {
 //   const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
