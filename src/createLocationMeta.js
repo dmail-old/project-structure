@@ -64,7 +64,9 @@ const match = ({
         matched = skipResult.matched
         patternIndex += skipResult.patternIndex
         partIndex += skipResult.partIndex
-        matchIndex += skipResult.matchIndex
+        if (matched) {
+          matchIndex += skipResult.matchIndex
+        }
 
         if (matched && patternIndex === patterns.length - 1) {
           break
@@ -81,10 +83,6 @@ const match = ({
       const partMatch = matchPart(pattern, part)
       matched = partMatch.matched
       matchIndex += partMatch.matchIndex
-
-      if (matched && skipUntilStartsMatching) {
-        skipUntilStartsMatching = false
-      }
 
       if (matched && isLastPattern && isLastPart) {
         break
@@ -156,7 +154,7 @@ const locationMatch = (pattern, location) => {
             matched,
             patternIndex: 0,
             partIndex: 0,
-            matchIndex: 1,
+            matchIndex: matched ? 1 : 0,
           }
         },
       })
@@ -184,8 +182,8 @@ export const createLocationMeta = () => {
   const canContainsMetaMatching = (filename, metaPredicate) => {
     return patternAndMetaList.some(({ pattern, meta }) => {
       const matchIndexForFile = filename.split("/").join("").length
-      const { matchIndex } = locationMatch(pattern, filename)
-      return matchIndex >= matchIndexForFile && metaPredicate(meta)
+      const { matched, matchIndex } = locationMatch(pattern, filename)
+      return matched === false && matchIndex >= matchIndexForFile && metaPredicate(meta)
     })
   }
 

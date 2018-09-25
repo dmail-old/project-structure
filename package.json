@@ -1,5 +1,5 @@
 {
-  "name": "@dmail/file-meta-pattern",
+  "name": "@dmail/project-structure",
   "version": "1.0.0",
   "licence": "MIT",
   "repository": {
@@ -12,17 +12,12 @@
   "main": "dist/index.js",
   "module": "index.js",
   "files": ["index.js", "src", "dist"],
-  "bin": {
-    "list": "./bin/list.js"
-  },
   "scripts": {
-    "test": "",
+    "test": "node ./src/createLocationMeta.test.js && node ./src/createRoot.test.js",
     "code-compile": "node ./script/compile.js",
-    "compile": "npn run code-compile"
+    "compile": "npm run code-compile"
   },
-  "dependencies": {
-    "ignore": "5.0.2"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@babel/core": "7.1.0",
     "prettier": "1.9.1",

@@ -2,6 +2,10 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var fs = _interopDefault(require('fs'));
+
 function _defineProperty(obj, key, value) {
   if (key in obj) {
     Object.defineProperty(obj, key, {
@@ -34,6 +38,26 @@ function _objectSpread(target) {
   }
 
   return target;
+}
+
+function _toConsumableArray(arr) {
+  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread();
+}
+
+function _arrayWithoutHoles(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
+
+    return arr2;
+  }
+}
+
+function _iterableToArray(iter) {
+  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
+}
+
+function _nonIterableSpread() {
+  throw new TypeError("Invalid attempt to spread non-iterable instance");
 }
 
 // https://git-scm.com/docs/gitignore
@@ -99,7 +123,10 @@ const match = ({
         matched = skipResult.matched;
         patternIndex += skipResult.patternIndex;
         partIndex += skipResult.partIndex;
-        matchIndex += skipResult.matchIndex;
+
+        if (matched) {
+          matchIndex += skipResult.matchIndex;
+        }
 
         if (matched && patternIndex === patterns.length - 1) {
           break;
@@ -119,10 +146,6 @@ const match = ({
       const partMatch = matchPart(pattern, part);
       matched = partMatch.matched;
       matchIndex += partMatch.matchIndex;
-
-      if (matched && skipUntilStartsMatching) {
-        skipUntilStartsMatching = false;
-      }
 
       if (matched && isLastPattern && isLastPart) {
         break;
@@ -196,7 +219,7 @@ const locationMatch = (pattern, location) => {
             matched,
             patternIndex: 0,
             partIndex: 0,
-            matchIndex: 1
+            matchIndex: matched ? 1 : 0
           };
         }
       });
@@ -233,10 +256,10 @@ const createLocationMeta = () => {
     }) => {
       const matchIndexForFile = filename.split("/").join("").length;
       const {
+        matched,
         matchIndex
       } = locationMatch(pattern, filename);
-      debugger;
-      return matchIndex >= matchIndexForFile && metaPredicate(meta);
+      return matched === false && matchIndex >= matchIndexForFile && metaPredicate(meta);
     });
   };
 
@@ -247,5 +270,144 @@ const createLocationMeta = () => {
   };
 };
 
+const readDirectory = dirname => new Promise((resolve, reject) => {
+  fs.readdir(dirname, (error, names) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(names);
+    }
+  });
+});
+
+const readStat = filename => new Promise((resolve, reject) => {
+  fs.stat(filename, (error, stat) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(stat);
+    }
+  });
+});
+
+const nothingToDo = {};
+const forEachFileMatching = ({
+  getMetaForLocation,
+  canContainsMetaMatching
+}, root, metaPredicate, callback) => {
+  const visit = folderRelativeLocation => {
+    const folderAbsoluteLocation = folderRelativeLocation ? `${root}/${folderRelativeLocation}` : root;
+    return readDirectory(folderAbsoluteLocation).then(names => {
+      return Promise.all(names.map(name => {
+        const ressourceRelativeLocation = folderRelativeLocation ? `${folderRelativeLocation}/${name}` : name;
+        const ressourceAbsoluteLocation = `${root}/${ressourceRelativeLocation}`;
+        return readStat(ressourceAbsoluteLocation).then(stat => {
+          if (stat.isDirectory()) {
+            if (canContainsMetaMatching(ressourceRelativeLocation, metaPredicate) === false) {
+              return [nothingToDo];
+            }
+
+            return visit(ressourceRelativeLocation);
+          }
+
+          const meta = getMetaForLocation(ressourceRelativeLocation);
+
+          if (metaPredicate(meta)) {
+            return Promise.resolve(callback({
+              absoluteName: ressourceAbsoluteLocation,
+              relativeName: ressourceRelativeLocation,
+              meta
+            })).then(result => {
+              return [result];
+            });
+          }
+
+          return [nothingToDo];
+        });
+      })).then(results => {
+        return results.reduce((previous, results) => {
+          return _toConsumableArray(previous).concat(_toConsumableArray(results));
+        }, []);
+      });
+    });
+  };
+
+  return visit().then(allResults => {
+    return allResults.filter(result => result !== nothingToDo);
+  });
+};
+
+const CONFIG_FILE_NAME = "structure.config.js";
+
+const loadMetasForRoot = root => {
+  return new Promise((resolve, reject) => {
+    const filename = `${root}/${CONFIG_FILE_NAME}`;
+    let value;
+    let errored = false;
+
+    try {
+      // eslint-disable-nextline no-dynamic-require
+      value = require(filename);
+    } catch (e) {
+      value = e;
+      errored = true;
+    }
+
+    if (errored) {
+      const error = value;
+
+      if (error && error.code === "MODULE_NOT_FOUND") {
+        return reject(new Error(`${filename} not found`));
+      }
+
+      if (error && error.code === "SYNTAX_ERROR") {
+        console.error(`${filename} contains a syntax error`);
+        return reject(error);
+      }
+
+      if (error && error.code === "REFERENCE_ERROR") {
+        console.error(`${filename} contains a reference error`);
+        return reject(error);
+      }
+
+      return reject(error);
+    }
+
+    const namespace = value;
+    const namespaceType = typeof namespace;
+
+    if (namespaceType !== "object") {
+      return reject(new TypeError(`${filename} must export an object, got ${namespaceType}`));
+    }
+
+    resolve(namespace.metas || []);
+  });
+};
+
+const createRoot = root => {
+  return loadMetasForRoot(root).then(metas => {
+    const locationMeta = createLocationMeta();
+    metas.forEach(({
+      pattern,
+      meta
+    }) => {
+      locationMeta.addMetaAtPattern(pattern, meta);
+    });
+
+    const scopedForEachFileMatching = (predicate, callback) => forEachFileMatching(locationMeta, root, predicate, callback);
+
+    const listFileMatching = predicate => forEachFileMatching(locationMeta, root, predicate, ({
+      relativeName
+    }) => relativeName);
+
+    return {
+      forEachFileMatching: scopedForEachFileMatching,
+      listFileMatching
+    };
+  });
+};
+
 exports.createLocationMeta = createLocationMeta;
+exports.forEachFileMatching = forEachFileMatching;
+exports.createRoot = createRoot;
 //# sourceMappingURL=index.js.map
