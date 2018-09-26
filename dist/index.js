@@ -248,17 +248,18 @@ const createLocationMeta = () => {
   };
 
   const canContainsMetaMatching = (filename, metaPredicate) => {
-    return patternAndMetaList.some(({
+    const matchIndexForFile = filename.split("/").join("").length;
+    const meta = patternAndMetaList.reduce((previousMeta, {
       pattern,
       meta
     }) => {
-      const matchIndexForFile = filename.split("/").join("").length;
       const {
         matched,
         matchIndex
       } = locationMatch(pattern, filename);
-      return matched === false && matchIndex >= matchIndexForFile && metaPredicate(meta);
-    });
+      return matched || matchIndex >= matchIndexForFile ? _objectSpread({}, previousMeta, meta) : previousMeta;
+    }, {});
+    return Boolean(metaPredicate(meta));
   };
 
   return {

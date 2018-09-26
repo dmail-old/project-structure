@@ -65,6 +65,15 @@ const assert = require("assert")
 
 {
   const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  addMetaAtPattern("a*bc", { a: true })
+
+  assert.deepEqual(getMetaForLocation("abc"), { a: true })
+  assert.deepEqual(getMetaForLocation("aZZbc"), { a: true })
+  assert.deepEqual(getMetaForLocation("aZZbd"), {})
+}
+
+{
+  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
   addMetaAtPattern("**/a", { a: true })
 
   assert.deepEqual(getMetaForLocation("a"), { a: true })
@@ -95,11 +104,10 @@ const assert = require("assert")
 
 {
   const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
-  addMetaAtPattern("a*bc", { a: true })
+  addMetaAtPattern("**/*", { a: true })
 
-  assert.deepEqual(getMetaForLocation("abc"), { a: true })
-  assert.deepEqual(getMetaForLocation("aZZbc"), { a: true })
-  assert.deepEqual(getMetaForLocation("aZZbd"), {})
+  assert.deepEqual(getMetaForLocation("a"), { a: true })
+  assert.deepEqual(getMetaForLocation("node_modules"), { a: true })
 }
 
 {
@@ -161,7 +169,7 @@ const assert = require("assert")
 
   assert.equal(canContainsMetaMatching("a", (meta) => meta.a), true)
   assert.equal(canContainsMetaMatching("a/c", (meta) => meta.a), false)
-  assert.equal(canContainsMetaMatching("a/b", (meta) => meta.a), false)
+  assert.equal(canContainsMetaMatching("a/b", (meta) => meta.a), true)
 }
 
 {
@@ -169,6 +177,7 @@ const assert = require("assert")
   addMetaAtPattern("a/b*/c", { a: true })
 
   assert.equal(canContainsMetaMatching("a/bZ", (meta) => meta.a), true)
+  assert.equal(canContainsMetaMatching("a/bZ/c", (meta) => meta.a), true)
 }
 
 {
@@ -176,6 +185,14 @@ const assert = require("assert")
   addMetaAtPattern("a/**/b.js", { a: true })
 
   assert.equal(canContainsMetaMatching("a/b/c", (meta) => meta.a), true)
+}
+
+{
+  const { addMetaAtPattern, canContainsMetaMatching } = createLocationMeta()
+  addMetaAtPattern("**/*", { a: true })
+  addMetaAtPattern("node_modules", { a: false })
+
+  assert.equal(canContainsMetaMatching("node_modules", (meta) => meta.a), false)
 }
 
 console.log("passed")
