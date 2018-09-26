@@ -4,7 +4,7 @@ const path = require("path")
 
 const rootLocation = path.resolve(__dirname, "../")
 
-createRoot(rootLocation).then((root) => {
+createRoot({ root: rootLocation }).then((root) => {
   return root.listFileMatching(({ source }) => source).then((files) => {
     assert.deepEqual(files, [
       "index.js",

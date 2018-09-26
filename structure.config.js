@@ -1,11 +1,12 @@
 module.exports = {
-  metas: [
-    // source
-    { pattern: "index.js", meta: { source: true } },
-    { pattern: "src/**/*.js", meta: { source: true } },
-    { pattern: "src/**/*.test.js", meta: { source: false } },
-
-    // test
-    { pattern: "src/**/*.test.js", meta: { test: true } },
-  ],
+  metas: {
+    source: {
+      "index.js": true,
+      "src/**/*.js": true,
+      "src/**/*.test.js": false,
+    },
+    test: {
+      "src/**/*.test.js": true,
+    },
+  },
 }

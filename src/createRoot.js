@@ -39,15 +39,20 @@ const loadMetasForRoot = (root) => {
       return reject(new TypeError(`${filename} must export an object, got ${namespaceType}`))
     }
 
-    resolve(namespace.metas || [])
+    resolve(namespace.metas || {})
   })
 }
 
-export const createRoot = (root) => {
+export const createRoot = ({ root, getLocationMeta = () => createLocationMeta() }) => {
   return loadMetasForRoot(root).then((metas) => {
-    const locationMeta = createLocationMeta()
-    metas.forEach(({ pattern, meta }) => {
-      locationMeta.addMetaAtPattern(pattern, meta)
+    const locationMeta = getLocationMeta()
+
+    Object.keys(metas).forEach((metaName) => {
+      const metaPatterns = metas[metaName]
+      Object.keys(metaPatterns).forEach((pattern) => {
+        const metaValue = metaPatterns[pattern]
+        locationMeta.addMetaAtPattern(pattern, { [metaName]: metaValue })
+      })
     })
 
     const scopedForEachFileMatching = (predicate, callback) =>
