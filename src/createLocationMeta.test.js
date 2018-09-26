@@ -195,4 +195,12 @@ const assert = require("assert")
   assert.equal(canContainsMetaMatching("node_modules", (meta) => meta.a), false)
 }
 
+{
+  const { addMetaAtPattern, canContainsMetaMatching } = createLocationMeta()
+  addMetaAtPattern("**/*.js", { a: true })
+  addMetaAtPattern("**/*.md", { a: false })
+
+  assert.equal(canContainsMetaMatching("src", (meta) => meta.a), true)
+}
+
 console.log("passed")

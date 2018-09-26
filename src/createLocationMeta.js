@@ -32,19 +32,47 @@ const match = ({
       const isLastPart = partIndex === parts.length - 1
 
       if (isSkipPattern && isLastPart && isLastPattern) {
-        matchIndex++
+        matchIndex += part.length
         break
       }
 
       if (isSkipPattern && isLastPattern && isLastPart === false) {
-        matchIndex++
+        matchIndex += part.length
         break
       }
 
       if (isSkipPattern && isLastPattern === false && isLastPart) {
         // test next pattern on current part
         patternIndex++
-        continue
+        const nextPatternResult = match({
+          patterns: patterns.slice(patternIndex),
+          parts: parts.slice(partIndex),
+          skipPredicate,
+          lastSkipRequired,
+          lastPatternRequired,
+          matchPart,
+        })
+        matched = nextPatternResult.matched
+        patternIndex += nextPatternResult.patternIndex
+        partIndex += nextPatternResult.partIndex
+
+        if (matched && patternIndex === patterns.length - 1) {
+          matchIndex += nextPatternResult.matchIndex
+          break
+        }
+        if (matched && partIndex === parts.length - 1) {
+          matchIndex += nextPatternResult.matchIndex
+          break
+        }
+        if (matched) {
+          matchIndex += nextPatternResult.matchIndex
+          continue
+        }
+
+        // we still increase the matchIndex by the length of the part because
+        // this part has matched even if the full pattern is not satisfied
+        matchIndex += part.length
+        break
       }
 
       if (isSkipPattern && isLastPattern === false && isLastPart === false) {
@@ -187,18 +215,27 @@ export const createLocationMeta = ({ mergeMeta = (a, b) => ({ ...a, ...b }) } = 
 
   const canContainsMetaMatching = (filename, metaPredicate) => {
     const matchIndexForFile = filename.split("/").join("").length
-    const meta = patternAndMetaList.reduce((previousMeta, { pattern, meta }) => {
+    const partialMatch = patternAndMetaList.some(({ pattern, meta }) => {
       const { matched, matchIndex } = locationMatch(pattern, filename)
-      return matched || matchIndex >= matchIndexForFile
-        ? mergeMeta(previousMeta, meta)
-        : previousMeta
-    }, {})
+      return matched === false && matchIndex >= matchIndexForFile && metaPredicate(meta)
+    })
+    if (partialMatch) {
+      return true
+    }
+
+    // no partial match satisfies predicate, does it work on a full match ?
+    const meta = getMetaForLocation(filename)
     return Boolean(metaPredicate(meta))
+  }
+
+  const toJSON = () => {
+    return patternAndMetaList
   }
 
   return {
     addMetaAtPattern,
     getMetaForLocation,
     canContainsMetaMatching,
+    toJSON,
   }
 }
