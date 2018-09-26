@@ -161,20 +161,27 @@ const locationMatch = (pattern, location) => {
   })
 }
 
-export const createLocationMeta = () => {
+export const createLocationMeta = ({ mergeMeta = (a, b) => ({ ...a, ...b }) } = {}) => {
   const patternAndMetaList = []
 
-  const addMetaAtPattern = (pattern, meta) => {
-    patternAndMetaList.push({
-      pattern,
-      meta,
-    })
+  const addMetaAtPattern = (pattern, meta = {}) => {
+    const existingPattern = patternAndMetaList.find(
+      (patternAndMeta) => patternAndMeta.pattern === pattern,
+    )
+    if (existingPattern) {
+      existingPattern.meta = mergeMeta(existingPattern.meta, meta)
+    } else {
+      patternAndMetaList.push({
+        pattern,
+        meta,
+      })
+    }
   }
 
   const getMetaForLocation = (filename) => {
     return patternAndMetaList.reduce((previousMeta, { pattern, meta }) => {
       const { matched } = locationMatch(pattern, filename)
-      return matched ? { ...previousMeta, ...meta } : previousMeta
+      return matched ? mergeMeta(previousMeta, meta) : previousMeta
     }, {})
   }
 
@@ -183,7 +190,7 @@ export const createLocationMeta = () => {
     const meta = patternAndMetaList.reduce((previousMeta, { pattern, meta }) => {
       const { matched, matchIndex } = locationMatch(pattern, filename)
       return matched || matchIndex >= matchIndexForFile
-        ? { ...previousMeta, ...meta }
+        ? mergeMeta(previousMeta, meta)
         : previousMeta
     }, {})
     return Boolean(metaPredicate(meta))
