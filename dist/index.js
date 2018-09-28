@@ -455,10 +455,10 @@ const createRoot = ({
       relativeName
     }) => relativeName);
 
-    return {
+    return _objectSpread({}, locationMeta, {
       forEachFileMatching: scopedForEachFileMatching,
       listFileMatching
-    };
+    });
   });
 };
 

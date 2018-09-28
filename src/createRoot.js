@@ -62,6 +62,7 @@ export const createRoot = ({ root, getLocationMeta = () => createLocationMeta() 
       forEachFileMatching(locationMeta, root, predicate, ({ relativeName }) => relativeName)
 
     return {
+      ...locationMeta,
       forEachFileMatching: scopedForEachFileMatching,
       listFileMatching,
     }
