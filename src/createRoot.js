@@ -3,7 +3,7 @@ import { forEachFileMatching } from "./forEachFileMatching.js"
 
 const CONFIG_FILE_NAME = "structure.config.js"
 
-const loadMetasForRoot = (root) => {
+export const loadMetasForRoot = (root) => {
   return new Promise((resolve, reject) => {
     const filename = `${root}/${CONFIG_FILE_NAME}`
 
@@ -43,28 +43,34 @@ const loadMetasForRoot = (root) => {
   })
 }
 
-export const createRoot = ({ root, getLocationMeta = () => createLocationMeta() }) => {
-  return loadMetasForRoot(root).then((metas) => {
-    const locationMeta = getLocationMeta()
+export const createRoot = ({
+  root,
+  loadMetas = loadMetasForRoot,
+  getLocationMeta = () => createLocationMeta(),
+}) => {
+  return Promise.resolve()
+    .then(() => loadMetas(root))
+    .then((metas) => {
+      const locationMeta = getLocationMeta()
 
-    Object.keys(metas).forEach((metaName) => {
-      const metaPatterns = metas[metaName]
-      Object.keys(metaPatterns).forEach((pattern) => {
-        const metaValue = metaPatterns[pattern]
-        locationMeta.addMetaAtPattern(pattern, { [metaName]: metaValue })
+      Object.keys(metas).forEach((metaName) => {
+        const metaPatterns = metas[metaName]
+        Object.keys(metaPatterns).forEach((pattern) => {
+          const metaValue = metaPatterns[pattern]
+          locationMeta.addMetaAtPattern(pattern, { [metaName]: metaValue })
+        })
       })
+
+      const scopedForEachFileMatching = (predicate, callback) =>
+        forEachFileMatching(locationMeta, root, predicate, callback)
+
+      const listFileMatching = (predicate) =>
+        forEachFileMatching(locationMeta, root, predicate, ({ relativeName }) => relativeName)
+
+      return {
+        ...locationMeta,
+        forEachFileMatching: scopedForEachFileMatching,
+        listFileMatching,
+      }
     })
-
-    const scopedForEachFileMatching = (predicate, callback) =>
-      forEachFileMatching(locationMeta, root, predicate, callback)
-
-    const listFileMatching = (predicate) =>
-      forEachFileMatching(locationMeta, root, predicate, ({ relativeName }) => relativeName)
-
-    return {
-      ...locationMeta,
-      forEachFileMatching: scopedForEachFileMatching,
-      listFileMatching,
-    }
-  })
 }
