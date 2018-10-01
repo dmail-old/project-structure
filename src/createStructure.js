@@ -189,7 +189,7 @@ const locationMatch = (pattern, location) => {
   })
 }
 
-export const createLocationMeta = ({ mergeMeta = (a, b) => ({ ...a, ...b }) } = {}) => {
+export const createStructure = ({ mergeMeta = (a, b) => ({ ...a, ...b }) } = {}) => {
   const patternAndMetaList = []
 
   const addMetaAtPattern = (pattern, meta = {}) => {

@@ -1,12 +1,10 @@
-import { createLocationMeta } from "./createLocationMeta.js"
+import { createStructure } from "./createStructure.js"
 import { forEachFileMatching } from "./forEachFileMatching.js"
 
 const CONFIG_FILE_NAME = "structure.config.js"
 
-export const loadMetasForRoot = (root) => {
+const loadConfigFile = (filename) => {
   return new Promise((resolve, reject) => {
-    const filename = `${root}/${CONFIG_FILE_NAME}`
-
     let value
     let errored = false
     try {
@@ -39,36 +37,39 @@ export const loadMetasForRoot = (root) => {
       return reject(new TypeError(`${filename} must export an object, got ${namespaceType}`))
     }
 
-    resolve(namespace.metas || {})
+    resolve(namespace || {})
   })
 }
 
-export const createRoot = ({
-  root,
-  loadMetas = loadMetasForRoot,
-  getLocationMeta = () => createLocationMeta(),
-}) => {
-  return Promise.resolve()
-    .then(() => loadMetas(root))
-    .then((metas) => {
-      const locationMeta = getLocationMeta()
+export const convertConfigIntoStructure = (config) => {
+  const structure = createStructure()
+  const metas = config.metas || {}
 
-      Object.keys(metas).forEach((metaName) => {
-        const metaPatterns = metas[metaName]
-        Object.keys(metaPatterns).forEach((pattern) => {
-          const metaValue = metaPatterns[pattern]
-          locationMeta.addMetaAtPattern(pattern, { [metaName]: metaValue })
-        })
-      })
+  Object.keys(metas).forEach((metaName) => {
+    const metaPatterns = metas[metaName]
+    Object.keys(metaPatterns).forEach((pattern) => {
+      const metaValue = metaPatterns[pattern]
+      structure.addMetaAtPattern(pattern, { [metaName]: metaValue })
+    })
+  })
 
+  return structure
+}
+
+export const createFileStructure = ({ root, config = CONFIG_FILE_NAME }) => {
+  return loadConfigFile(`${root}/${config}`)
+    .then((config) => {
+      return convertConfigIntoStructure(config)
+    })
+    .then((structure) => {
       const scopedForEachFileMatching = (predicate, callback) =>
-        forEachFileMatching(locationMeta, root, predicate, callback)
+        forEachFileMatching(structure, root, predicate, callback)
 
       const listFileMatching = (predicate) =>
-        forEachFileMatching(locationMeta, root, predicate, ({ relativeName }) => relativeName)
+        forEachFileMatching(structure, root, predicate, ({ relativeName }) => relativeName)
 
       return {
-        ...locationMeta,
+        ...structure,
         forEachFileMatching: scopedForEachFileMatching,
         listFileMatching,
       }

@@ -255,7 +255,7 @@ const locationMatch = (pattern, location) => {
   });
 };
 
-const createLocationMeta = ({
+const createStructure = ({
   mergeMeta = (a, b) => _objectSpread({}, a, b)
 } = {}) => {
   const patternAndMetaList = [];
@@ -388,9 +388,8 @@ const forEachFileMatching = ({
 
 const CONFIG_FILE_NAME = "structure.config.js";
 
-const loadMetasForRoot = root => {
+const loadConfigFile = filename => {
   return new Promise((resolve, reject) => {
-    const filename = `${root}/${CONFIG_FILE_NAME}`;
     let value;
     let errored = false;
 
@@ -429,40 +428,46 @@ const loadMetasForRoot = root => {
       return reject(new TypeError(`${filename} must export an object, got ${namespaceType}`));
     }
 
-    resolve(namespace.metas || {});
+    resolve(namespace || {});
   });
 };
 
-const createRoot = ({
-  root,
-  getLocationMeta = () => createLocationMeta()
-}) => {
-  return loadMetasForRoot(root).then(metas => {
-    const locationMeta = getLocationMeta();
-    Object.keys(metas).forEach(metaName => {
-      const metaPatterns = metas[metaName];
-      Object.keys(metaPatterns).forEach(pattern => {
-        const metaValue = metaPatterns[pattern];
-        locationMeta.addMetaAtPattern(pattern, {
-          [metaName]: metaValue
-        });
+const convertConfigIntoStructure = config => {
+  const structure = createStructure();
+  const metas = config.metas || {};
+  Object.keys(metas).forEach(metaName => {
+    const metaPatterns = metas[metaName];
+    Object.keys(metaPatterns).forEach(pattern => {
+      const metaValue = metaPatterns[pattern];
+      structure.addMetaAtPattern(pattern, {
+        [metaName]: metaValue
       });
     });
+  });
+  return structure;
+};
+const createFileStructure = ({
+  root,
+  config = CONFIG_FILE_NAME
+}) => {
+  return loadConfigFile(`${root}/${config}`).then(config => {
+    return convertConfigIntoStructure(config);
+  }).then(structure => {
+    const scopedForEachFileMatching = (predicate, callback) => forEachFileMatching(structure, root, predicate, callback);
 
-    const scopedForEachFileMatching = (predicate, callback) => forEachFileMatching(locationMeta, root, predicate, callback);
-
-    const listFileMatching = predicate => forEachFileMatching(locationMeta, root, predicate, ({
+    const listFileMatching = predicate => forEachFileMatching(structure, root, predicate, ({
       relativeName
     }) => relativeName);
 
-    return _objectSpread({}, locationMeta, {
+    return _objectSpread({}, structure, {
       forEachFileMatching: scopedForEachFileMatching,
       listFileMatching
     });
   });
 };
 
-exports.createLocationMeta = createLocationMeta;
+exports.createStructure = createStructure;
 exports.forEachFileMatching = forEachFileMatching;
-exports.createRoot = createRoot;
+exports.createFileStructure = createFileStructure;
+exports.convertConfigIntoStructure = convertConfigIntoStructure;
 //# sourceMappingURL=index.js.map

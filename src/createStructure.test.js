@@ -1,17 +1,17 @@
 // https://github.com/kaelzhang/node-ignore
 
-const { createLocationMeta } = require("../dist/index.js")
+const { createStructure } = require("../dist/index.js")
 const assert = require("assert")
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("foo", { a: true })
 
   assert.deepEqual(getMetaForLocation("foo"), { a: true })
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("a", { a: true })
 
   assert.deepEqual(getMetaForLocation("a"), { a: true })
@@ -21,7 +21,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("b/a", { a: true })
 
   assert.deepEqual(getMetaForLocation("b/a"), { a: true })
@@ -31,7 +31,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("*a", { a: true })
 
   assert.deepEqual(getMetaForLocation("a"), { a: true })
@@ -41,7 +41,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("a*", { a: true })
 
   assert.deepEqual(getMetaForLocation("a"), { a: true })
@@ -51,7 +51,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("*a*", { a: true })
 
   assert.deepEqual(getMetaForLocation("a"), { a: true })
@@ -64,7 +64,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("a*bc", { a: true })
 
   assert.deepEqual(getMetaForLocation("abc"), { a: true })
@@ -73,7 +73,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("**/a", { a: true })
 
   assert.deepEqual(getMetaForLocation("a"), { a: true })
@@ -83,7 +83,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("a/**", { a: true })
 
   assert.deepEqual(getMetaForLocation("a"), {})
@@ -94,7 +94,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("**/a/**", { a: true })
 
   assert.deepEqual(getMetaForLocation("a"), {})
@@ -103,7 +103,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("**/*", { a: true })
 
   assert.deepEqual(getMetaForLocation("a"), { a: true })
@@ -111,7 +111,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("a/**/*.test.js", { a: true })
 
   assert.deepEqual(getMetaForLocation("a"), {})
@@ -121,7 +121,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("index.js", { cover: true })
   addMetaAtPattern("src/**/*.js", { cover: true })
   addMetaAtPattern("src/**/*.jsx", { cover: true })
@@ -141,14 +141,14 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("**/*.js", { prettify: true })
 
   assert.deepEqual(getMetaForLocation("index.test.js"), { prettify: true })
 }
 
 {
-  const { addMetaAtPattern, getMetaForLocation } = createLocationMeta()
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("**/*.js", { prettify: true })
   addMetaAtPattern("**/*.jsx", { prettify: true })
   addMetaAtPattern("build", { prettify: false })
@@ -164,7 +164,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, canContainsMetaMatching } = createLocationMeta()
+  const { addMetaAtPattern, canContainsMetaMatching } = createStructure()
   addMetaAtPattern("a/b", { a: true })
 
   assert.equal(canContainsMetaMatching("a", (meta) => meta.a), true)
@@ -173,7 +173,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, canContainsMetaMatching } = createLocationMeta()
+  const { addMetaAtPattern, canContainsMetaMatching } = createStructure()
   addMetaAtPattern("a/b*/c", { a: true })
 
   assert.equal(canContainsMetaMatching("a/bZ", (meta) => meta.a), true)
@@ -181,14 +181,14 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, canContainsMetaMatching } = createLocationMeta()
+  const { addMetaAtPattern, canContainsMetaMatching } = createStructure()
   addMetaAtPattern("a/**/b.js", { a: true })
 
   assert.equal(canContainsMetaMatching("a/b/c", (meta) => meta.a), true)
 }
 
 {
-  const { addMetaAtPattern, canContainsMetaMatching } = createLocationMeta()
+  const { addMetaAtPattern, canContainsMetaMatching } = createStructure()
   addMetaAtPattern("**/*", { a: true })
   addMetaAtPattern("node_modules", { a: false })
 
@@ -196,7 +196,7 @@ const assert = require("assert")
 }
 
 {
-  const { addMetaAtPattern, canContainsMetaMatching } = createLocationMeta()
+  const { addMetaAtPattern, canContainsMetaMatching } = createStructure()
   addMetaAtPattern("**/*.js", { a: true })
   addMetaAtPattern("**/*.md", { a: false })
 

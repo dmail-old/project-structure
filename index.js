@@ -1,7 +1,7 @@
-import { createLocationMeta } from "./src/createLocationMeta.js"
+import { createStructure } from "./src/createStructure.js"
 import { forEachFileMatching } from "./src/forEachFileMatching.js"
-import { createRoot, loadMetasForRoot } from "./src/createRoot.js"
+import { createFileStructure, convertConfigIntoStructure } from "./src/createFileStructure.js"
 
-export { createLocationMeta }
+export { createStructure }
 export { forEachFileMatching }
-export { createRoot, loadMetasForRoot }
+export { createFileStructure, convertConfigIntoStructure }
