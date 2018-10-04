@@ -174,6 +174,10 @@ const match = ({
       matched = partMatch.matched;
       matchIndex += partMatch.matchIndex;
 
+      if (matched === false && skipUntilStartsMatching) {
+        matchIndex += part.length;
+      }
+
       if (matched && isLastPattern && isLastPart) {
         break;
       }
@@ -211,7 +215,6 @@ const match = ({
       if (matched === false && skipUntilStartsMatching && isLastPart === false) {
         partIndex++; // keep searching for that pattern
 
-        matchIndex++;
         continue;
       }
 
