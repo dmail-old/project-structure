@@ -153,13 +153,13 @@ const match = ({
 
       break
     }
+  }
 
-    return {
-      matched,
-      matchIndex,
-      patternIndex,
-      partIndex,
-    }
+  return {
+    matched,
+    matchIndex,
+    patternIndex,
+    partIndex,
   }
 }
 

@@ -7,6 +7,20 @@ const assert = require("assert")
   const { addMetaAtPattern, getMetaForLocation } = createStructure()
   addMetaAtPattern("foo", { a: true })
 
+  assert.deepEqual(getMetaForLocation(""), {})
+}
+
+{
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
+  addMetaAtPattern("foo", { a: true })
+
+  assert.deepEqual(getMetaForLocation("/"), {})
+}
+
+{
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
+  addMetaAtPattern("foo", { a: true })
+
   assert.deepEqual(getMetaForLocation("foo"), { a: true })
 }
 
