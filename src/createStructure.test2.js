@@ -9,4 +9,12 @@ const assert = require("assert")
   assert.equal(canContainsMetaMatching("src/folder/subfolder", (meta) => meta.a), true)
 }
 
+{
+  const { addMetaAtPattern, getMetaForLocation } = createStructure()
+  addMetaAtPattern("dist", { a: 0 })
+
+  assert.equal(getMetaForLocation("dist").a, 0)
+  assert.equal(getMetaForLocation("a/dist").a, undefined)
+}
+
 console.log("passed")
