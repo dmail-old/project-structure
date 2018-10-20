@@ -1,7 +1,5 @@
-import { createStructure } from "./src/createStructure.js"
-import { forEachFileMatching } from "./src/forEachFileMatching.js"
-import { createFileStructure, convertConfigIntoStructure } from "./src/createFileStructure.js"
-
-export { createStructure }
-export { forEachFileMatching }
-export { createFileStructure, convertConfigIntoStructure }
+export { configToMetaMap } from "./src/configToMetaMap.js"
+export { forEachRessourceMatching } from "./src/forEachRessourceMatching.js"
+export { readProjectMetaMap } from "./src/readProjectMetaMap.js"
+export { ressourceCanContainsMetaMatching } from "./src/ressourceCanContainsMetaMatching.js"
+export { ressourceToMeta } from "./src/ressourceToMeta.js"

@@ -163,10 +163,10 @@ const match = ({
   }
 }
 
-const locationMatch = (pattern, location) => {
+export const ressourceMatch = (pattern, ressource) => {
   return match({
     patterns: pattern.split("/"),
-    parts: location.split("/"),
+    parts: ressource.split("/"),
     lastPatternRequired: false,
     lastSkipRequired: true,
     skipPredicate: (sequencePattern) => sequencePattern === "**",
@@ -189,55 +189,4 @@ const locationMatch = (pattern, location) => {
       })
     },
   })
-}
-
-export const createStructure = ({ mergeMeta = (a, b) => ({ ...a, ...b }) } = {}) => {
-  const patternAndMetaList = []
-
-  const addMetaAtPattern = (pattern, meta = {}) => {
-    const existingPattern = patternAndMetaList.find(
-      (patternAndMeta) => patternAndMeta.pattern === pattern,
-    )
-    if (existingPattern) {
-      existingPattern.meta = mergeMeta(existingPattern.meta, meta)
-    } else {
-      patternAndMetaList.push({
-        pattern,
-        meta,
-      })
-    }
-  }
-
-  const getMetaForLocation = (filename) => {
-    return patternAndMetaList.reduce((previousMeta, { pattern, meta }) => {
-      const { matched } = locationMatch(pattern, filename)
-      return matched ? mergeMeta(previousMeta, meta) : previousMeta
-    }, {})
-  }
-
-  const canContainsMetaMatching = (filename, metaPredicate) => {
-    const matchIndexForFile = filename.split("/").join("").length
-    const partialMatch = patternAndMetaList.some(({ pattern, meta }) => {
-      const { matched, matchIndex } = locationMatch(pattern, filename)
-      return matched === false && matchIndex >= matchIndexForFile && metaPredicate(meta)
-    })
-    if (partialMatch) {
-      return true
-    }
-
-    // no partial match satisfies predicate, does it work on a full match ?
-    const meta = getMetaForLocation(filename)
-    return Boolean(metaPredicate(meta))
-  }
-
-  const toJSON = () => {
-    return patternAndMetaList
-  }
-
-  return {
-    addMetaAtPattern,
-    getMetaForLocation,
-    canContainsMetaMatching,
-    toJSON,
-  }
 }

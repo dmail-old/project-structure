@@ -1,4 +1,6 @@
 import fs from "fs"
+import { ressourceCanContainsMetaMatching } from "./ressourceCanContainsMetaMatching.js"
+import { ressourceToMeta } from "./ressourceToMeta.js"
 
 const readDirectory = (dirname) =>
   new Promise((resolve, reject) => {
@@ -24,12 +26,20 @@ const readStat = (filename) =>
 
 const nothingToDo = {}
 
-export const forEachFileMatching = (
-  { getMetaForLocation, canContainsMetaMatching },
-  root,
-  metaPredicate,
-  callback,
-) => {
+export const forEachRessourceMatching = (root, metaMap, predicate, callback) => {
+  if (typeof root !== "string") {
+    throw new TypeError(`forEachRessourceMatching metaMap must be a string, got ${root}`)
+  }
+  if (typeof metaMap !== "object") {
+    throw new TypeError(`forEachRessourceMatching ressource must be a object, got ${metaMap}`)
+  }
+  if (typeof predicate !== "function") {
+    throw new TypeError(`forEachRessourceMatching predicate must be a function, got ${predicate}`)
+  }
+  if (typeof callback !== "function") {
+    throw new TypeError(`forEachRessourceMatching callback must be a function, got ${callback}`)
+  }
+
   const visit = (folderRelativeLocation) => {
     const folderAbsoluteLocation = folderRelativeLocation
       ? `${root}/${folderRelativeLocation}`
@@ -45,14 +55,17 @@ export const forEachFileMatching = (
 
           return readStat(ressourceAbsoluteLocation).then((stat) => {
             if (stat.isDirectory()) {
-              if (canContainsMetaMatching(ressourceRelativeLocation, metaPredicate) === false) {
+              if (
+                ressourceCanContainsMetaMatching(metaMap, ressourceRelativeLocation, predicate) ===
+                false
+              ) {
                 return [nothingToDo]
               }
               return visit(ressourceRelativeLocation)
             }
 
-            const meta = getMetaForLocation(ressourceRelativeLocation)
-            if (metaPredicate(meta)) {
+            const meta = ressourceToMeta(metaMap, ressourceRelativeLocation)
+            if (predicate(meta)) {
               return Promise.resolve(
                 callback({
                   absoluteName: ressourceAbsoluteLocation,

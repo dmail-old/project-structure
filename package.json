@@ -4,20 +4,17 @@
   "licence": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dmail/file-meta-pattern"
+    "url": "https://github.com/dmail/project-structure"
   },
   "publishConfig": {
     "access": "public"
   },
   "main": "dist/index.js",
   "module": "index.js",
-  "files": [
-    "index.js",
-    "src",
-    "dist"
-  ],
+  "files": ["index.js", "src", "dist"],
   "scripts": {
-    "test": "node ./src/createLocationMeta.test.js && node ./src/createRoot.test.js",
+    "test":
+      "node ./src/ressourceToMeta.test.js && node ./src/ressourceCanContainsMetaMatching.test.js && node ./src/readProjectMetaMap.test.js",
     "code-compile": "node ./script/compile.js",
     "compile": "npm run code-compile"
   },

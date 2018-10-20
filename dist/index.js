@@ -60,6 +60,22 @@ function _nonIterableSpread() {
   throw new TypeError("Invalid attempt to spread non-iterable instance");
 }
 
+const configToMetaMap = config => {
+  const metas = config.metas || {};
+  const metaMap = {};
+  Object.keys(metas).forEach(metaName => {
+    const metaPatterns = metas[metaName];
+    Object.keys(metaPatterns).forEach(pattern => {
+      const metaValue = metaPatterns[pattern];
+      const meta = {
+        [metaName]: metaValue
+      };
+      metaMap[pattern] = pattern in metaMap ? _objectSpread({}, metaMap[pattern], meta) : meta;
+    });
+  });
+  return metaMap;
+};
+
 // https://git-scm.com/docs/gitignore
 const match = ({
   patterns,
@@ -230,10 +246,10 @@ const match = ({
   };
 };
 
-const locationMatch = (pattern, location) => {
+const ressourceMatch = (pattern, ressource) => {
   return match({
     patterns: pattern.split("/"),
-    parts: location.split("/"),
+    parts: ressource.split("/"),
     lastPatternRequired: false,
     lastSkipRequired: true,
     skipPredicate: sequencePattern => sequencePattern === "**",
@@ -258,68 +274,44 @@ const locationMatch = (pattern, location) => {
   });
 };
 
-const createStructure = ({
-  mergeMeta = (a, b) => _objectSpread({}, a, b)
-} = {}) => {
-  const patternAndMetaList = [];
+const ressourceToMeta = (metaMap, ressource) => {
+  return Object.keys(metaMap).reduce((previousMeta, pattern) => {
+    const {
+      matched
+    } = ressourceMatch(pattern, ressource);
+    return matched ? _objectSpread({}, previousMeta, metaMap[pattern]) : previousMeta;
+  }, {});
+};
 
-  const addMetaAtPattern = (pattern, meta = {}) => {
-    const existingPattern = patternAndMetaList.find(patternAndMeta => patternAndMeta.pattern === pattern);
+const ressourceCanContainsMetaMatching = (metaMap, ressource, predicate) => {
+  if (typeof metaMap !== "object") {
+    throw new TypeError(`ressourceCanContainsMetaMatching metaMap must be an object, got ${metaMap}`);
+  }
 
-    if (existingPattern) {
-      existingPattern.meta = mergeMeta(existingPattern.meta, meta);
-    } else {
-      patternAndMetaList.push({
-        pattern,
-        meta
-      });
-    }
-  };
+  if (typeof ressource !== "string") {
+    throw new TypeError(`ressourceCanContainsMetaMatching ressource must be a string, got ${ressource}`);
+  }
 
-  const getMetaForLocation = filename => {
-    return patternAndMetaList.reduce((previousMeta, {
-      pattern,
-      meta
-    }) => {
-      const {
-        matched
-      } = locationMatch(pattern, filename);
-      return matched ? mergeMeta(previousMeta, meta) : previousMeta;
-    }, {});
-  };
+  if (typeof predicate !== "function") {
+    throw new TypeError(`ressourceCanContainsMetaMatching predicate must be a function, got ${predicate}`);
+  }
 
-  const canContainsMetaMatching = (filename, metaPredicate) => {
-    const matchIndexForFile = filename.split("/").join("").length;
-    const partialMatch = patternAndMetaList.some(({
-      pattern,
-      meta
-    }) => {
-      const {
-        matched,
-        matchIndex
-      } = locationMatch(pattern, filename);
-      return matched === false && matchIndex >= matchIndexForFile && metaPredicate(meta);
-    });
+  const matchIndexForRessource = ressource.split("/").join("").length;
+  const partialMatch = Object.keys(metaMap).some(pattern => {
+    const {
+      matched,
+      matchIndex
+    } = ressourceMatch(pattern, ressource);
+    return matched === false && matchIndex >= matchIndexForRessource && predicate(metaMap[pattern]);
+  });
 
-    if (partialMatch) {
-      return true;
-    } // no partial match satisfies predicate, does it work on a full match ?
+  if (partialMatch) {
+    return true;
+  } // no partial match satisfies predicate, does it work on a full match ?
 
 
-    const meta = getMetaForLocation(filename);
-    return Boolean(metaPredicate(meta));
-  };
-
-  const toJSON = () => {
-    return patternAndMetaList;
-  };
-
-  return {
-    addMetaAtPattern,
-    getMetaForLocation,
-    canContainsMetaMatching,
-    toJSON
-  };
+  const meta = ressourceToMeta(metaMap, ressource);
+  return Boolean(predicate(meta));
 };
 
 const readDirectory = dirname => new Promise((resolve, reject) => {
@@ -343,10 +335,23 @@ const readStat = filename => new Promise((resolve, reject) => {
 });
 
 const nothingToDo = {};
-const forEachFileMatching = ({
-  getMetaForLocation,
-  canContainsMetaMatching
-}, root, metaPredicate, callback) => {
+const forEachRessourceMatching = (root, metaMap, predicate, callback) => {
+  if (typeof root !== "string") {
+    throw new TypeError(`forEachRessourceMatching metaMap must be a string, got ${root}`);
+  }
+
+  if (typeof metaMap !== "object") {
+    throw new TypeError(`forEachRessourceMatching ressource must be a object, got ${metaMap}`);
+  }
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`forEachRessourceMatching predicate must be a function, got ${predicate}`);
+  }
+
+  if (typeof callback !== "function") {
+    throw new TypeError(`forEachRessourceMatching callback must be a function, got ${callback}`);
+  }
+
   const visit = folderRelativeLocation => {
     const folderAbsoluteLocation = folderRelativeLocation ? `${root}/${folderRelativeLocation}` : root;
     return readDirectory(folderAbsoluteLocation).then(names => {
@@ -355,16 +360,16 @@ const forEachFileMatching = ({
         const ressourceAbsoluteLocation = `${root}/${ressourceRelativeLocation}`;
         return readStat(ressourceAbsoluteLocation).then(stat => {
           if (stat.isDirectory()) {
-            if (canContainsMetaMatching(ressourceRelativeLocation, metaPredicate) === false) {
+            if (ressourceCanContainsMetaMatching(metaMap, ressourceRelativeLocation, predicate) === false) {
               return [nothingToDo];
             }
 
             return visit(ressourceRelativeLocation);
           }
 
-          const meta = getMetaForLocation(ressourceRelativeLocation);
+          const meta = ressourceToMeta(metaMap, ressourceRelativeLocation);
 
-          if (metaPredicate(meta)) {
+          if (predicate(meta)) {
             return Promise.resolve(callback({
               absoluteName: ressourceAbsoluteLocation,
               relativeName: ressourceRelativeLocation,
@@ -435,42 +440,18 @@ const loadConfigFile = filename => {
   });
 };
 
-const convertConfigIntoStructure = config => {
-  const structure = createStructure();
-  const metas = config.metas || {};
-  Object.keys(metas).forEach(metaName => {
-    const metaPatterns = metas[metaName];
-    Object.keys(metaPatterns).forEach(pattern => {
-      const metaValue = metaPatterns[pattern];
-      structure.addMetaAtPattern(pattern, {
-        [metaName]: metaValue
-      });
-    });
-  });
-  return structure;
-};
-const createFileStructure = ({
+const readProjectMetaMap = ({
   root,
   config = CONFIG_FILE_NAME
 }) => {
   return loadConfigFile(`${root}/${config}`).then(config => {
-    return convertConfigIntoStructure(config);
-  }).then(structure => {
-    const scopedForEachFileMatching = (predicate, callback) => forEachFileMatching(structure, root, predicate, callback);
-
-    const listFileMatching = predicate => forEachFileMatching(structure, root, predicate, ({
-      relativeName
-    }) => relativeName);
-
-    return _objectSpread({}, structure, {
-      forEachFileMatching: scopedForEachFileMatching,
-      listFileMatching
-    });
+    return configToMetaMap(config);
   });
 };
 
-exports.createStructure = createStructure;
-exports.forEachFileMatching = forEachFileMatching;
-exports.createFileStructure = createFileStructure;
-exports.convertConfigIntoStructure = convertConfigIntoStructure;
+exports.configToMetaMap = configToMetaMap;
+exports.forEachRessourceMatching = forEachRessourceMatching;
+exports.readProjectMetaMap = readProjectMetaMap;
+exports.ressourceCanContainsMetaMatching = ressourceCanContainsMetaMatching;
+exports.ressourceToMeta = ressourceToMeta;
 //# sourceMappingURL=index.js.map
