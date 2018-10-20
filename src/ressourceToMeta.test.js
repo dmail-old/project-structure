@@ -194,4 +194,13 @@ const assert = require("assert")
   assert.deepEqual(ressourceToMeta(metaMap, "src/exception.js"), { prettify: false })
 }
 
+{
+  const metaMap = {
+    dist: { a: 0 },
+  }
+
+  assert.equal(ressourceToMeta(metaMap, "dist").a, 0)
+  assert.equal(ressourceToMeta(metaMap, "a/dist").a, undefined)
+}
+
 console.log("passed")
