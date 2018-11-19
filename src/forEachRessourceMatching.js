@@ -26,7 +26,7 @@ const readStat = (filename) =>
 
 const nothingToDo = {}
 
-export const forEachRessourceMatching = (root, metaMap, predicate, callback) => {
+export const forEachRessourceMatching = async (root, metaMap, predicate, callback) => {
   if (typeof root !== "string") {
     throw new TypeError(`forEachRessourceMatching metaMap must be a string, got ${root}`)
   }
@@ -40,53 +40,40 @@ export const forEachRessourceMatching = (root, metaMap, predicate, callback) => 
     throw new TypeError(`forEachRessourceMatching callback must be a function, got ${callback}`)
   }
 
-  const visit = (folderRelativeLocation) => {
-    const folderAbsoluteLocation = folderRelativeLocation
-      ? `${root}/${folderRelativeLocation}`
-      : root
+  const visitFolder = async (folder) => {
+    const folderAbsolute = folder ? `${root}/${folder}` : root
 
-    return readDirectory(folderAbsoluteLocation).then((names) => {
-      return Promise.all(
-        names.map((name) => {
-          const ressourceRelativeLocation = folderRelativeLocation
-            ? `${folderRelativeLocation}/${name}`
-            : name
-          const ressourceAbsoluteLocation = `${root}/${ressourceRelativeLocation}`
+    const names = await readDirectory(folderAbsolute)
 
-          return readStat(ressourceAbsoluteLocation).then((stat) => {
-            if (stat.isDirectory()) {
-              if (
-                ressourceCanContainsMetaMatching(metaMap, ressourceRelativeLocation, predicate) ===
-                false
-              ) {
-                return [nothingToDo]
-              }
-              return visit(ressourceRelativeLocation)
-            }
+    const results = await Promise.all(
+      names.map(async (name) => {
+        const ressource = folder ? `${folder}/${name}` : name
 
-            const meta = ressourceToMeta(metaMap, ressourceRelativeLocation)
-            if (predicate(meta)) {
-              return Promise.resolve(
-                callback({
-                  absoluteName: ressourceAbsoluteLocation,
-                  relativeName: ressourceRelativeLocation,
-                  meta,
-                }),
-              ).then((result) => {
-                return [result]
-              })
-            }
+        const ressourceAbsolute = `${root}/${ressource}`
+        const stat = await readStat(ressourceAbsolute)
+
+        if (stat.isDirectory()) {
+          if (!ressourceCanContainsMetaMatching(metaMap, ressource, predicate)) {
             return [nothingToDo]
-          })
-        }),
-      ).then((results) => {
-        return results.reduce((previous, results) => {
-          return [...previous, ...results]
-        }, [])
-      })
-    })
+          }
+          return visitFolder(ressource)
+        }
+
+        const meta = ressourceToMeta(metaMap, ressource)
+        if (!predicate(meta)) {
+          return [nothingToDo]
+        }
+
+        const result = await callback(ressource, meta)
+        return [result]
+      }),
+    )
+
+    return results.reduce((previous, results) => {
+      return [...previous, ...results]
+    }, [])
   }
-  return visit().then((allResults) => {
-    return allResults.filter((result) => result !== nothingToDo)
-  })
+
+  const allResults = await visitFolder()
+  return allResults.filter((result) => result !== nothingToDo)
 }
