@@ -2,36 +2,14 @@ import fs from "fs"
 import { ressourceCanContainsMetaMatching } from "./ressourceCanContainsMetaMatching.js"
 import { ressourceToMeta } from "./ressourceToMeta.js"
 
-const readDirectory = (dirname) =>
-  new Promise((resolve, reject) => {
-    fs.readdir(dirname, (error, names) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve(names)
-      }
-    })
-  })
-
-const readStat = (filename) =>
-  new Promise((resolve, reject) => {
-    fs.stat(filename, (error, stat) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve(stat)
-      }
-    })
-  })
-
 const nothingToDo = {}
 
 export const forEachRessourceMatching = async (root, metaMap, predicate, callback) => {
   if (typeof root !== "string") {
-    throw new TypeError(`forEachRessourceMatching metaMap must be a string, got ${root}`)
+    throw new TypeError(`forEachRessourceMatching root must be a string, got ${root}`)
   }
   if (typeof metaMap !== "object") {
-    throw new TypeError(`forEachRessourceMatching ressource must be a object, got ${metaMap}`)
+    throw new TypeError(`forEachRessourceMatching metaMap must be a object, got ${metaMap}`)
   }
   if (typeof predicate !== "function") {
     throw new TypeError(`forEachRessourceMatching predicate must be a function, got ${predicate}`)
@@ -77,3 +55,25 @@ export const forEachRessourceMatching = async (root, metaMap, predicate, callbac
   const allResults = await visitFolder()
   return allResults.filter((result) => result !== nothingToDo)
 }
+
+const readDirectory = (dirname) =>
+  new Promise((resolve, reject) => {
+    fs.readdir(dirname, (error, names) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(names)
+      }
+    })
+  })
+
+const readStat = (filename) =>
+  new Promise((resolve, reject) => {
+    fs.stat(filename, (error, stat) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(stat)
+      }
+    })
+  })
