@@ -1,2 +1,6 @@
-import "./test/ressourceToMeta.test.js"
+import "./test/anyFolder.test.js"
+import "./test/basic.test.js"
+import "./test/complex.test.js"
+import "./test/forEachRessourceMatching.test.js"
 import "./test/ressourceCanContainsMetaMatching.test.js"
+import "./test/wildcard.test.js"

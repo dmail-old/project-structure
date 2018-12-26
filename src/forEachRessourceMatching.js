@@ -2,11 +2,15 @@ import fs from "fs"
 import { ressourceCanContainsMetaMatching } from "./ressourceCanContainsMetaMatching.js"
 import { ressourceToMeta } from "./ressourceToMeta.js"
 
-const nothingToDo = {}
-
-export const forEachRessourceMatching = async (root, metaMap, predicate, callback) => {
-  if (typeof root !== "string") {
-    throw new TypeError(`forEachRessourceMatching root must be a string, got ${root}`)
+// TODO: when using node 10.0 convert this to async generator
+export const forEachRessourceMatching = async ({
+  localRoot,
+  metaMap,
+  predicate,
+  callback = (ressource) => ressource,
+}) => {
+  if (typeof localRoot !== "string") {
+    throw new TypeError(`forEachRessourceMatching localRoot must be a string, got ${localRoot}`)
   }
   if (typeof metaMap !== "object") {
     throw new TypeError(`forEachRessourceMatching metaMap must be a object, got ${metaMap}`)
@@ -18,42 +22,41 @@ export const forEachRessourceMatching = async (root, metaMap, predicate, callbac
     throw new TypeError(`forEachRessourceMatching callback must be a function, got ${callback}`)
   }
 
+  const results = []
   const visitFolder = async (folder) => {
-    const folderAbsolute = folder ? `${root}/${folder}` : root
+    const folderAbsolute = folder ? `${localRoot}/${folder}` : localRoot
 
     const names = await readDirectory(folderAbsolute)
 
-    const results = await Promise.all(
+    await Promise.all(
       names.map(async (name) => {
         const ressource = folder ? `${folder}/${name}` : name
 
-        const ressourceAbsolute = `${root}/${ressource}`
+        const ressourceAbsolute = `${localRoot}/${ressource}`
         const stat = await readStat(ressourceAbsolute)
 
         if (stat.isDirectory()) {
           if (!ressourceCanContainsMetaMatching(metaMap, ressource, predicate)) {
-            return [nothingToDo]
+            return null
           }
           return visitFolder(ressource)
         }
 
         const meta = ressourceToMeta(metaMap, ressource)
         if (!predicate(meta)) {
-          return [nothingToDo]
+          return null
         }
 
         const result = await callback(ressource, meta)
-        return [result]
+        results.push(result)
+        return null
       }),
     )
-
-    return results.reduce((previous, results) => {
-      return [...previous, ...results]
-    }, [])
   }
 
-  const allResults = await visitFolder()
-  return allResults.filter((result) => result !== nothingToDo)
+  await visitFolder()
+
+  return results
 }
 
 const readDirectory = (dirname) =>

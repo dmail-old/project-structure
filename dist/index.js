@@ -6,77 +6,8 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var fs = _interopDefault(require('fs'));
 
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, {
-      value: value,
-      enumerable: true,
-      configurable: true,
-      writable: true
-    });
-  } else {
-    obj[key] = value;
-  }
-
-  return obj;
-}
-
-function _objectSpread(target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i] != null ? arguments[i] : {};
-    var ownKeys = Object.keys(source);
-
-    if (typeof Object.getOwnPropertySymbols === 'function') {
-      ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
-        return Object.getOwnPropertyDescriptor(source, sym).enumerable;
-      }));
-    }
-
-    ownKeys.forEach(function (key) {
-      _defineProperty(target, key, source[key]);
-    });
-  }
-
-  return target;
-}
-
-function _toConsumableArray(arr) {
-  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread();
-}
-
-function _arrayWithoutHoles(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
-
-    return arr2;
-  }
-}
-
-function _iterableToArray(iter) {
-  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
-}
-
-function _nonIterableSpread() {
-  throw new TypeError("Invalid attempt to spread non-iterable instance");
-}
-
-const configToMetaMap = config => {
-  const metas = config.metas || {};
-  const metaMap = {};
-  Object.keys(metas).forEach(metaName => {
-    const metaPatterns = metas[metaName];
-    Object.keys(metaPatterns).forEach(pattern => {
-      const metaValue = metaPatterns[pattern];
-      const meta = {
-        [metaName]: metaValue
-      };
-      metaMap[pattern] = pattern in metaMap ? _objectSpread({}, metaMap[pattern], meta) : meta;
-    });
-  });
-  return metaMap;
-};
-
 // https://git-scm.com/docs/gitignore
+// https://github.com/kaelzhang/node-ignore
 const match = ({
   patterns,
   parts,
@@ -99,7 +30,7 @@ const match = ({
   } else if (patterns.length && parts.length === 0) {
     matched = false;
   } else {
-    matched = true;
+    matched = true; // eslint-disable-next-line no-constant-condition
 
     while (true) {
       const pattern = patterns[patternIndex];
@@ -274,6 +205,40 @@ const ressourceMatch = (pattern, ressource) => {
   });
 };
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
+function _objectSpread(target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i] != null ? arguments[i] : {};
+    var ownKeys = Object.keys(source);
+
+    if (typeof Object.getOwnPropertySymbols === 'function') {
+      ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(source, sym).enumerable;
+      }));
+    }
+
+    ownKeys.forEach(function (key) {
+      _defineProperty(target, key, source[key]);
+    });
+  }
+
+  return target;
+}
+
 const ressourceToMeta = (metaMap, ressource) => {
   return Object.keys(metaMap).reduce((previousMeta, pattern) => {
     const {
@@ -314,10 +279,14 @@ const ressourceCanContainsMetaMatching = (metaMap, ressource, predicate) => {
   return Boolean(predicate(meta));
 };
 
-const nothingToDo = {};
-const forEachRessourceMatching = async (root, metaMap, predicate, callback) => {
-  if (typeof root !== "string") {
-    throw new TypeError(`forEachRessourceMatching root must be a string, got ${root}`);
+const forEachRessourceMatching = async ({
+  localRoot,
+  metaMap,
+  predicate,
+  callback = ressource => ressource
+}) => {
+  if (typeof localRoot !== "string") {
+    throw new TypeError(`forEachRessourceMatching localRoot must be a string, got ${localRoot}`);
   }
 
   if (typeof metaMap !== "object") {
@@ -332,17 +301,19 @@ const forEachRessourceMatching = async (root, metaMap, predicate, callback) => {
     throw new TypeError(`forEachRessourceMatching callback must be a function, got ${callback}`);
   }
 
+  const results = [];
+
   const visitFolder = async folder => {
-    const folderAbsolute = folder ? `${root}/${folder}` : root;
+    const folderAbsolute = folder ? `${localRoot}/${folder}` : localRoot;
     const names = await readDirectory(folderAbsolute);
-    const results = await Promise.all(names.map(async name => {
+    await Promise.all(names.map(async name => {
       const ressource = folder ? `${folder}/${name}` : name;
-      const ressourceAbsolute = `${root}/${ressource}`;
+      const ressourceAbsolute = `${localRoot}/${ressource}`;
       const stat = await readStat(ressourceAbsolute);
 
       if (stat.isDirectory()) {
         if (!ressourceCanContainsMetaMatching(metaMap, ressource, predicate)) {
-          return [nothingToDo];
+          return null;
         }
 
         return visitFolder(ressource);
@@ -351,19 +322,17 @@ const forEachRessourceMatching = async (root, metaMap, predicate, callback) => {
       const meta = ressourceToMeta(metaMap, ressource);
 
       if (!predicate(meta)) {
-        return [nothingToDo];
+        return null;
       }
 
       const result = await callback(ressource, meta);
-      return [result];
+      results.push(result);
+      return null;
     }));
-    return results.reduce((previous, results) => {
-      return _toConsumableArray(previous).concat(_toConsumableArray(results));
-    }, []);
   };
 
-  const allResults = await visitFolder();
-  return allResults.filter(result => result !== nothingToDo);
+  await visitFolder();
+  return results;
 };
 
 const readDirectory = dirname => new Promise((resolve, reject) => {
@@ -386,8 +355,23 @@ const readStat = filename => new Promise((resolve, reject) => {
   });
 });
 
-exports.configToMetaMap = configToMetaMap;
+const patternGroupToMetaMap = patternGroup => {
+  const metaMap = {};
+  Object.keys(patternGroup).forEach(metaName => {
+    const valueMap = patternGroup[metaName];
+    Object.keys(valueMap).forEach(pattern => {
+      const value = valueMap[pattern];
+      const meta = {
+        [metaName]: value
+      };
+      metaMap[pattern] = pattern in metaMap ? _objectSpread({}, metaMap[pattern], meta) : meta;
+    });
+  });
+  return metaMap;
+};
+
 exports.forEachRessourceMatching = forEachRessourceMatching;
+exports.patternGroupToMetaMap = patternGroupToMetaMap;
 exports.ressourceCanContainsMetaMatching = ressourceCanContainsMetaMatching;
 exports.ressourceToMeta = ressourceToMeta;
 //# sourceMappingURL=index.js.map

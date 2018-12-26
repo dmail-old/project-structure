@@ -1,4 +1,5 @@
 // https://git-scm.com/docs/gitignore
+// https://github.com/kaelzhang/node-ignore
 
 const match = ({
   patterns,

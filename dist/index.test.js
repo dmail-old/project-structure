@@ -1,6 +1,9 @@
 'use strict';
 
-require('fs');
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var fs = _interopDefault(require('fs'));
+var path = _interopDefault(require('path'));
 
 const somePrototypeMatch = (value, predicate) => {
   let prototype = Object.getPrototypeOf(value);
@@ -951,21 +954,21 @@ const valueToCompositeWellKnownPath = (value) => {
 const isPrimitive$1 = (value) => !isComposite(value);
 
 const addWellKnownComposite = (value, name) => {
-  const visitValue = (value, path) => {
+  const visitValue = (value, path$$1) => {
     if (isPrimitive$1(value)) {
-      primitiveWellKnownMap.set(value, path);
+      primitiveWellKnownMap.set(value, path$$1);
       return
     }
 
     if (compositeWellKnownMap.has(value)) return // prevent infinite recursion
-    compositeWellKnownMap.set(value, path);
+    compositeWellKnownMap.set(value, path$$1);
 
     const visitProperty = (property) => {
       const descriptor = Object.getOwnPropertyDescriptor(value, property);
       // do not trigger getter/setter
       if ("value" in descriptor) {
         const propertyValue = descriptor.value;
-        visitValue(propertyValue, [...path, property]);
+        visitValue(propertyValue, [...path$$1, property]);
       }
     };
 
@@ -1173,41 +1176,8 @@ const createAssertionError = (message) => {
   return error
 };
 
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, {
-      value: value,
-      enumerable: true,
-      configurable: true,
-      writable: true
-    });
-  } else {
-    obj[key] = value;
-  }
-
-  return obj;
-}
-
-function _objectSpread(target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i] != null ? arguments[i] : {};
-    var ownKeys = Object.keys(source);
-
-    if (typeof Object.getOwnPropertySymbols === 'function') {
-      ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
-        return Object.getOwnPropertyDescriptor(source, sym).enumerable;
-      }));
-    }
-
-    ownKeys.forEach(function (key) {
-      _defineProperty(target, key, source[key]);
-    });
-  }
-
-  return target;
-}
-
 // https://git-scm.com/docs/gitignore
+// https://github.com/kaelzhang/node-ignore
 const match = ({
   patterns,
   parts,
@@ -1230,7 +1200,7 @@ const match = ({
   } else if (patterns.length && parts.length === 0) {
     matched = false;
   } else {
-    matched = true;
+    matched = true; // eslint-disable-next-line no-constant-condition
 
     while (true) {
       const pattern = patterns[patternIndex];
@@ -1405,6 +1375,40 @@ const ressourceMatch = (pattern, ressource) => {
   });
 };
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
+function _objectSpread(target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i] != null ? arguments[i] : {};
+    var ownKeys = Object.keys(source);
+
+    if (typeof Object.getOwnPropertySymbols === 'function') {
+      ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(source, sym).enumerable;
+      }));
+    }
+
+    ownKeys.forEach(function (key) {
+      _defineProperty(target, key, source[key]);
+    });
+  }
+
+  return target;
+}
+
 const ressourceToMeta = (metaMap, ressource) => {
   return Object.keys(metaMap).reduce((previousMeta, pattern) => {
     const {
@@ -1445,228 +1449,83 @@ const ressourceCanContainsMetaMatching = (metaMap, ressource, predicate) => {
   return Boolean(predicate(meta));
 };
 
+const forEachRessourceMatching = async ({
+  localRoot,
+  metaMap,
+  predicate,
+  callback = ressource => ressource
+}) => {
+  if (typeof localRoot !== "string") {
+    throw new TypeError(`forEachRessourceMatching localRoot must be a string, got ${localRoot}`);
+  }
+
+  if (typeof metaMap !== "object") {
+    throw new TypeError(`forEachRessourceMatching metaMap must be a object, got ${metaMap}`);
+  }
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`forEachRessourceMatching predicate must be a function, got ${predicate}`);
+  }
+
+  if (typeof callback !== "function") {
+    throw new TypeError(`forEachRessourceMatching callback must be a function, got ${callback}`);
+  }
+
+  const results = [];
+
+  const visitFolder = async folder => {
+    const folderAbsolute = folder ? `${localRoot}/${folder}` : localRoot;
+    const names = await readDirectory(folderAbsolute);
+    await Promise.all(names.map(async name => {
+      const ressource = folder ? `${folder}/${name}` : name;
+      const ressourceAbsolute = `${localRoot}/${ressource}`;
+      const stat = await readStat(ressourceAbsolute);
+
+      if (stat.isDirectory()) {
+        if (!ressourceCanContainsMetaMatching(metaMap, ressource, predicate)) {
+          return null;
+        }
+
+        return visitFolder(ressource);
+      }
+
+      const meta = ressourceToMeta(metaMap, ressource);
+
+      if (!predicate(meta)) {
+        return null;
+      }
+
+      const result = await callback(ressource, meta);
+      results.push(result);
+      return null;
+    }));
+  };
+
+  await visitFolder();
+  return results;
+};
+
+const readDirectory = dirname => new Promise((resolve, reject) => {
+  fs.readdir(dirname, (error, names) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(names);
+    }
+  });
+});
+
+const readStat = filename => new Promise((resolve, reject) => {
+  fs.stat(filename, (error, stat) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(stat);
+    }
+  });
+});
+
 // https://github.com/kaelzhang/node-ignore
-{
-  const metaMap = {
-    foo: {
-      a: true
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, ""),
-    expected: {}
-  });
-}
-{
-  const metaMap = {
-    foo: {
-      a: true
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, "/"),
-    expected: {}
-  });
-}
-{
-  const metaMap = {
-    foo: {
-      a: true
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, "foo"),
-    expected: {
-      a: true
-    }
-  });
-}
-{
-  const metaMap = {
-    a: {
-      a: true
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, "a"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "a.js"),
-    expected: {}
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "a/b"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "a/b.js"),
-    expected: {
-      a: true
-    }
-  });
-}
-{
-  const metaMap = {
-    "b/a": {
-      a: true
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, "b/a"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "b/a.js"),
-    expected: {}
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "b/c"),
-    expected: {}
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "b/a/c"),
-    expected: {
-      a: true
-    }
-  });
-}
-{
-  const metaMap = {
-    "*a": {
-      a: true
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, "a"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "Za"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "ZZZa"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "aZ"),
-    expected: {}
-  });
-}
-{
-  const metaMap = {
-    "a*": {
-      a: true
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, "a"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "aZ"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "aZZZ"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "Za"),
-    expected: {}
-  });
-}
-{
-  const metaMap = {
-    "*a*": {
-      a: true
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, "a"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "Za"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "aZ"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "ZZa"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "aZZ"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "ZaZ"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "ZZaZZ"),
-    expected: {
-      a: true
-    }
-  });
-}
-{
-  const metaMap = {
-    "a*bc": {
-      a: true
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, "abc"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "aZZbc"),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "aZZbd"),
-    expected: {}
-  });
-}
 {
   const metaMap = {
     "**/a": {
@@ -1800,6 +1659,187 @@ const ressourceCanContainsMetaMatching = (metaMap, ressource, predicate) => {
 }
 {
   const metaMap = {
+    "**/*.js": {
+      a: true
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, "index.test.js"),
+    expected: {
+      a: true
+    }
+  });
+}
+console.log("passed");
+
+{
+  const metaMap = {
+    foo: {
+      a: true
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, ""),
+    expected: {}
+  });
+}
+{
+  const metaMap = {
+    foo: {
+      a: true
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, "/"),
+    expected: {}
+  });
+}
+{
+  const metaMap = {
+    foo: {
+      a: true
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, "foo"),
+    expected: {
+      a: true
+    }
+  });
+}
+{
+  const metaMap = {
+    a: {
+      a: true
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, "a"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "a.js"),
+    expected: {}
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "a/b"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "a/b.js"),
+    expected: {
+      a: true
+    }
+  });
+}
+{
+  const metaMap = {
+    "b/a": {
+      a: true
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, "b/a"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "b/a.js"),
+    expected: {}
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "b/c"),
+    expected: {}
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "b/a/c"),
+    expected: {
+      a: true
+    }
+  });
+}
+{
+  const metaMap = {
+    dist: {
+      a: 0
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, "dist").a,
+    expected: 0
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "a/dist").a,
+    expected: undefined
+  });
+}
+console.log("passed");
+
+{
+  const metaMap = {
+    "**/*.js": {
+      format: true
+    },
+    "**/*.jsx": {
+      format: true
+    },
+    build: {
+      format: false
+    },
+    "src/exception.js": {
+      format: false
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, "index.js"),
+    expected: {
+      format: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "src/file.js"),
+    expected: {
+      format: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "src/folder/file.js"),
+    expected: {
+      format: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "index.test.js"),
+    expected: {
+      format: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "src/file.test.js"),
+    expected: {
+      format: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "src/folder/file.test.js"),
+    expected: {
+      format: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "src/exception.js"),
+    expected: {
+      format: false
+    }
+  });
+}
+{
+  const metaMap = {
     "index.js": {
       cover: true
     },
@@ -1871,93 +1911,31 @@ const ressourceCanContainsMetaMatching = (metaMap, ressource, predicate) => {
     }
   });
 }
-{
-  const metaMap = {
-    "**/*.js": {
-      prettify: true
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, "index.test.js"),
-    expected: {
-      prettify: true
-    }
-  });
-}
-{
-  const metaMap = {
-    "**/*.js": {
-      prettify: true
-    },
-    "**/*.jsx": {
-      prettify: true
-    },
-    build: {
-      prettify: false
-    },
-    "src/exception.js": {
-      prettify: false
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, "index.js"),
-    expected: {
-      prettify: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "src/file.js"),
-    expected: {
-      prettify: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "src/folder/file.js"),
-    expected: {
-      prettify: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "index.test.js"),
-    expected: {
-      prettify: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "src/file.test.js"),
-    expected: {
-      prettify: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "src/folder/file.test.js"),
-    expected: {
-      prettify: true
-    }
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "src/exception.js"),
-    expected: {
-      prettify: false
-    }
-  });
-}
-{
-  const metaMap = {
-    dist: {
-      a: 0
-    }
-  };
-  assert({
-    actual: ressourceToMeta(metaMap, "dist").a,
-    expected: 0
-  });
-  assert({
-    actual: ressourceToMeta(metaMap, "a/dist").a,
-    expected: undefined
-  });
-}
-console.log("passed");
+
+const localRoot = path.resolve(__dirname, "../"); // because runned from dist
+
+const test = async () => {
+  {
+    const metaMap = {
+      src: {
+        source: true
+      }
+    };
+    const ressources = await forEachRessourceMatching({
+      localRoot,
+      metaMap,
+      predicate: ({
+        source
+      }) => source
+    });
+    assert({
+      actual: ressources,
+      expected: ["src/forEachRessourceMatching.js", "src/patternGroupToMetaMap.js", "src/ressourceCanContainsMetaMatching.js", "src/ressourceMatch.js", "src/ressourceToMeta.js"]
+    });
+  }
+};
+
+test();
 
 {
   const metaMap = {
@@ -2011,7 +1989,8 @@ console.log("passed");
     },
     node_modules: {
       a: false
-    }
+    } // eslint-disable-line camelcase
+
   };
   assert({
     actual: ressourceCanContainsMetaMatching(metaMap, "node_modules", meta => meta.a),
@@ -2059,4 +2038,135 @@ console.log("passed");
   });
 }
 console.log("passed");
+
+{
+  const metaMap = {
+    "*a": {
+      a: true
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, "a"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "Za"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "ZZZa"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "aZ"),
+    expected: {}
+  });
+}
+{
+  const metaMap = {
+    "a*": {
+      a: true
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, "a"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "aZ"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "aZZZ"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "Za"),
+    expected: {}
+  });
+}
+{
+  const metaMap = {
+    "*a*": {
+      a: true
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, "a"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "Za"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "aZ"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "ZZa"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "aZZ"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "ZaZ"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "ZZaZZ"),
+    expected: {
+      a: true
+    }
+  });
+}
+{
+  const metaMap = {
+    "a*bc": {
+      a: true
+    }
+  };
+  assert({
+    actual: ressourceToMeta(metaMap, "abc"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "aZZbc"),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: ressourceToMeta(metaMap, "aZZbd"),
+    expected: {}
+  });
+}
 //# sourceMappingURL=index.test.js.map
