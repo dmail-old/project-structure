@@ -24,6 +24,7 @@ const match = ({
   } else {
     matched = true
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const pattern = patterns[patternIndex]
       const part = parts[partIndex]

@@ -49,7 +49,7 @@ import { ressourceCanContainsMetaMatching } from "../index.js"
 {
   const metaMap = {
     "**/*": { a: true },
-    node_modules: { a: false },
+    node_modules: { a: false }, // eslint-disable-line camelcase
   }
 
   assert({
