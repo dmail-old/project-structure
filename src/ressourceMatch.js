@@ -1,6 +1,34 @@
 // https://git-scm.com/docs/gitignore
 // https://github.com/kaelzhang/node-ignore
 
+export const ressourceMatch = (pattern, ressource) => {
+  return match({
+    patterns: pattern.split("/"),
+    parts: ressource.split("/"),
+    lastPatternRequired: false,
+    lastSkipRequired: true,
+    skipPredicate: (sequencePattern) => sequencePattern === "**",
+    matchPart: (sequencePattern, sequencePart) => {
+      return match({
+        patterns: sequencePattern.split(""),
+        parts: sequencePart.split(""),
+        lastPatternRequired: true,
+        lastSkipRequired: false,
+        skipPredicate: (charPattern) => charPattern === "*",
+        matchPart: (charPattern, charSource) => {
+          const matched = charPattern === charSource
+          return {
+            matched,
+            patternIndex: 0,
+            partIndex: 0,
+            matchIndex: matched ? 1 : 0,
+          }
+        },
+      })
+    },
+  })
+}
+
 const match = ({
   patterns,
   parts,
@@ -163,32 +191,4 @@ const match = ({
     patternIndex,
     partIndex,
   }
-}
-
-export const ressourceMatch = (pattern, ressource) => {
-  return match({
-    patterns: pattern.split("/"),
-    parts: ressource.split("/"),
-    lastPatternRequired: false,
-    lastSkipRequired: true,
-    skipPredicate: (sequencePattern) => sequencePattern === "**",
-    matchPart: (sequencePattern, sequencePart) => {
-      return match({
-        patterns: sequencePattern.split(""),
-        parts: sequencePart.split(""),
-        lastPatternRequired: true,
-        lastSkipRequired: false,
-        skipPredicate: (charPattern) => charPattern === "*",
-        matchPart: (charPattern, charSource) => {
-          const matched = charPattern === charSource
-          return {
-            matched,
-            patternIndex: 0,
-            partIndex: 0,
-            matchIndex: matched ? 1 : 0,
-          }
-        },
-      })
-    },
-  })
 }
