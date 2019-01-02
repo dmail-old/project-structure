@@ -3,6 +3,34 @@ import { ressourceToMeta } from "../index.js"
 
 {
   const metaMap = {
+    "**/*.js": { js: true },
+  }
+  const actual = ressourceToMeta(metaMap, "file.es5.js/file.es5.js.map")
+  const expected = { js: true }
+  assert({ actual, expected })
+}
+
+{
+  const metaMap = {
+    "**/*.js": { js: true },
+    "**/*.js/**": { js: false },
+  }
+  const actual = ressourceToMeta(metaMap, "file.es5.js/file.es5.js.map")
+  const expected = { js: false }
+  assert({ actual, expected })
+}
+
+{
+  const metaMap = {
+    "**/*.js": { js: true },
+  }
+  const actual = ressourceToMeta(metaMap, "file.js.map")
+  const expected = {}
+  assert({ actual, expected })
+}
+
+{
+  const metaMap = {
     "**/*.js": { format: true },
     "**/*.jsx": { format: true },
     build: { format: false },

@@ -1178,6 +1178,34 @@ const createAssertionError = (message) => {
 
 // https://git-scm.com/docs/gitignore
 // https://github.com/kaelzhang/node-ignore
+const ressourceMatch = (pattern, ressource) => {
+  return match({
+    patterns: pattern.split("/"),
+    parts: ressource.split("/"),
+    lastPatternRequired: false,
+    lastSkipRequired: true,
+    skipPredicate: sequencePattern => sequencePattern === "**",
+    matchPart: (sequencePattern, sequencePart) => {
+      return match({
+        patterns: sequencePattern.split(""),
+        parts: sequencePart.split(""),
+        lastPatternRequired: true,
+        lastSkipRequired: false,
+        skipPredicate: charPattern => charPattern === "*",
+        matchPart: (charPattern, charSource) => {
+          const matched = charPattern === charSource;
+          return {
+            matched,
+            patternIndex: 0,
+            partIndex: 0,
+            matchIndex: matched ? 1 : 0
+          };
+        }
+      });
+    }
+  });
+};
+
 const match = ({
   patterns,
   parts,
@@ -1345,34 +1373,6 @@ const match = ({
     patternIndex,
     partIndex
   };
-};
-
-const ressourceMatch = (pattern, ressource) => {
-  return match({
-    patterns: pattern.split("/"),
-    parts: ressource.split("/"),
-    lastPatternRequired: false,
-    lastSkipRequired: true,
-    skipPredicate: sequencePattern => sequencePattern === "**",
-    matchPart: (sequencePattern, sequencePart) => {
-      return match({
-        patterns: sequencePattern.split(""),
-        parts: sequencePart.split(""),
-        lastPatternRequired: true,
-        lastSkipRequired: false,
-        skipPredicate: charPattern => charPattern === "*",
-        matchPart: (charPattern, charSource) => {
-          const matched = charPattern === charSource;
-          return {
-            matched,
-            patternIndex: 0,
-            partIndex: 0,
-            matchIndex: matched ? 1 : 0
-          };
-        }
-      });
-    }
-  });
 };
 
 function _defineProperty(obj, key, value) {
@@ -1780,6 +1780,52 @@ console.log("passed");
 }
 console.log("passed");
 
+{
+  const metaMap = {
+    "**/*.js": {
+      js: true
+    }
+  };
+  const actual = ressourceToMeta(metaMap, "file.es5.js/file.es5.js.map");
+  const expected = {
+    js: true
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const metaMap = {
+    "**/*.js": {
+      js: true
+    },
+    "**/*.js/**": {
+      js: false
+    }
+  };
+  const actual = ressourceToMeta(metaMap, "file.es5.js/file.es5.js.map");
+  const expected = {
+    js: false
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const metaMap = {
+    "**/*.js": {
+      js: true
+    }
+  };
+  const actual = ressourceToMeta(metaMap, "file.js.map");
+  const expected = {};
+  assert({
+    actual,
+    expected
+  });
+}
 {
   const metaMap = {
     "**/*.js": {
