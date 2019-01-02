@@ -1,8 +1,9 @@
 const { rollup } = require("rollup")
 const babel = require("rollup-plugin-babel")
 const nodeResolve = require("rollup-plugin-node-resolve")
-const { localRoot, plugins } = require("../config/project.config.js")
+const { localRoot } = require("./util.js")
 
+const plugins = ["@babel/plugin-proposal-object-rest-spread", "@babel/plugin-transform-spread"]
 const inputFile = `${localRoot}/index.test.js`
 const outputFile = `${localRoot}/dist/index.test.js`
 
