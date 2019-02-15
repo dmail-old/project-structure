@@ -1,10 +1,10 @@
 // https://git-scm.com/docs/gitignore
 // https://github.com/kaelzhang/node-ignore
 
-export const ressourceMatch = (pattern, ressource) => {
+export const pathnameMatch = ({ pathname, pattern }) => {
   return match({
     patterns: pattern.split("/"),
-    parts: ressource.split("/"),
+    parts: pathname.split("/"),
     lastPatternRequired: false,
     lastSkipRequired: true,
     skipPredicate: (sequencePattern) => sequencePattern === "**",

@@ -6,12 +6,65 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var fs = _interopDefault(require('fs'));
 
+// TODO: externalize this into '@dmail/helper'
+
+// https://github.com/tc39/proposal-cancellation/tree/master/stage0
+
+const createCancellationToken = () => {
+  const register = (callback) => {
+    return {
+      callback,
+      unregister: () => {},
+    }
+  };
+
+  const throwIfRequested = () => undefined;
+
+  return {
+    register,
+    cancellationRequested: false,
+    throwIfRequested,
+  }
+};
+
+const createOperation = ({
+  cancellationToken = createCancellationToken(),
+  start,
+  ...rest
+}) => {
+  ensureExactParameters$1(rest);
+  cancellationToken.throwIfRequested();
+
+  const promise = new Promise((resolve) => {
+    resolve(start());
+  });
+  const cancelPromise = new Promise((resolve, reject) => {
+    const cancelRegistration = cancellationToken.register((cancelError) => {
+      cancelRegistration.unregister();
+      reject(cancelError);
+    });
+    promise.then(cancelRegistration.unregister, () => {});
+  });
+  const operationPromise = Promise.race([promise, cancelPromise]);
+
+  return operationPromise
+};
+
+const ensureExactParameters$1 = (extraParameters) => {
+  const extraParamNames = Object.keys(extraParameters);
+  if (extraParamNames.length)
+    throw new Error(`createOperation expect only cancellationToken, start. Got ${extraParamNames}`)
+};
+
 // https://git-scm.com/docs/gitignore
 // https://github.com/kaelzhang/node-ignore
-const ressourceMatch = (pattern, ressource) => {
+const pathnameMatch = ({
+  pathname,
+  pattern
+}) => {
   return match({
     patterns: pattern.split("/"),
-    parts: ressource.split("/"),
+    parts: pathname.split("/"),
     lastPatternRequired: false,
     lastSkipRequired: true,
     skipPredicate: sequencePattern => sequencePattern === "**",
@@ -239,104 +292,126 @@ function _objectSpread(target) {
   return target;
 }
 
-const ressourceToMeta = (metaMap, ressource) => {
-  return Object.keys(metaMap).reduce((previousMeta, pattern) => {
+const pathnameToMeta = ({
+  pathname,
+  metaDescription
+}) => {
+  return Object.keys(metaDescription).reduce((previousMeta, metaPattern) => {
     const {
       matched
-    } = ressourceMatch(pattern, ressource);
-    return matched ? _objectSpread({}, previousMeta, metaMap[pattern]) : previousMeta;
+    } = pathnameMatch({
+      pathname,
+      pattern: metaPattern
+    });
+    return matched ? _objectSpread({}, previousMeta, metaDescription[metaPattern]) : previousMeta;
   }, {});
 };
 
-const ressourceCanContainsMetaMatching = (metaMap, ressource, predicate) => {
-  if (typeof metaMap !== "object") {
-    throw new TypeError(`ressourceCanContainsMetaMatching metaMap must be an object, got ${metaMap}`);
-  }
-
-  if (typeof ressource !== "string") {
-    throw new TypeError(`ressourceCanContainsMetaMatching ressource must be a string, got ${ressource}`);
-  }
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`ressourceCanContainsMetaMatching predicate must be a function, got ${predicate}`);
-  }
-
-  const matchIndexForRessource = ressource.split("/").join("").length;
-  const partialMatch = Object.keys(metaMap).some(pattern => {
+const pathnameCanContainsMetaMatching = ({
+  pathname,
+  metaDescription,
+  predicate
+}) => {
+  if (typeof pathname !== "string") throw new TypeError(`pathname must be a string, got ${pathname}`);
+  if (typeof metaDescription !== "object") throw new TypeError(`metaDescription must be an object, got ${metaDescription}`);
+  if (typeof predicate !== "function") throw new TypeError(`predicate must be a function, got ${predicate}`);
+  const matchIndexForFolder = pathname.split("/").join("").length;
+  const partialMatch = Object.keys(metaDescription).some(pattern => {
     const {
       matched,
       matchIndex
-    } = ressourceMatch(pattern, ressource);
-    return matched === false && matchIndex >= matchIndexForRessource && predicate(metaMap[pattern]);
+    } = pathnameMatch({
+      pathname,
+      pattern
+    });
+    return matched === false && matchIndex >= matchIndexForFolder && predicate(metaDescription[pattern]);
   });
+  if (partialMatch) return true; // no partial match satisfies predicate, does it work on a full match ?
 
-  if (partialMatch) {
-    return true;
-  } // no partial match satisfies predicate, does it work on a full match ?
-
-
-  const meta = ressourceToMeta(metaMap, ressource);
+  const meta = pathnameToMeta({
+    pathname,
+    metaDescription
+  });
   return Boolean(predicate(meta));
 };
 
-const forEachRessourceMatching = async ({
-  localRoot,
-  metaMap,
+const selectAllFileInsideFolder = async ({
+  cancellationToken = createCancellationToken(),
+  pathname: entryPathname,
+  metaDescription,
   predicate,
-  callback = ressource => ressource
+  transformFile = file => file
 }) => {
-  if (typeof localRoot !== "string") {
-    throw new TypeError(`forEachRessourceMatching localRoot must be a string, got ${localRoot}`);
-  }
-
-  if (typeof metaMap !== "object") {
-    throw new TypeError(`forEachRessourceMatching metaMap must be a object, got ${metaMap}`);
-  }
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`forEachRessourceMatching predicate must be a function, got ${predicate}`);
-  }
-
-  if (typeof callback !== "function") {
-    throw new TypeError(`forEachRessourceMatching callback must be a function, got ${callback}`);
-  }
-
+  if (typeof entryPathname !== "string") throw new TypeError(`pathname must be a string, got ${entryPathname}`);
+  if (typeof metaDescription !== "object") throw new TypeError(`metaMap must be a object, got ${metaDescription}`);
+  if (typeof predicate !== "function") throw new TypeError(`predicate must be a function, got ${predicate}`);
+  if (typeof transformFile !== "function") throw new TypeError(`transformFile must be a function, got ${transformFile}`);
   const results = [];
 
-  const visitFolder = async folder => {
-    const folderAbsolute = folder ? `${localRoot}/${folder}` : localRoot;
-    const names = await readDirectory(folderAbsolute);
+  const visitFolder = async folderPathname => {
+    const names = await createOperation({
+      cancellationToken,
+      start: () => readDirectory(folderPathname)
+    });
     await Promise.all(names.map(async name => {
-      const ressource = folder ? `${folder}/${name}` : name;
-      const ressourceAbsolute = `${localRoot}/${ressource}`;
-      const stat = await readStat(ressourceAbsolute);
+      const pathname = `${folderPathname}/${name}`;
+      const pathnameRelative = pathnameToRelativePathname(pathname, entryPathname);
+      const lstat = await createOperation({
+        cancellationToken,
+        start: () => readLStat(pathname)
+      });
 
-      if (stat.isDirectory()) {
-        if (!ressourceCanContainsMetaMatching(metaMap, ressource, predicate)) {
+      if (lstat.isDirectory()) {
+        if (!pathnameCanContainsMetaMatching({
+          pathname: pathnameRelative,
+          metaDescription,
+          predicate
+        })) return null;
+        return visitFolder(pathname);
+      }
+
+      if (lstat.isFile()) {
+        const meta = pathnameToMeta({
+          pathname: pathnameRelative,
+          metaDescription
+        });
+
+        if (!predicate(meta)) {
           return null;
         }
 
-        return visitFolder(ressource);
-      }
-
-      const meta = ressourceToMeta(metaMap, ressource);
-
-      if (!predicate(meta)) {
+        const result = await createOperation({
+          cancellationToken,
+          start: () => transformFile({
+            filenameRelative: pathnameRelative,
+            meta,
+            lstat
+          })
+        });
+        results.push(result);
         return null;
-      }
+      } // we ignore symlink because entryFolder is recursively traversed
+      // so symlinked file will be discovered.
+      // Moreover if they lead outside of entryFolder it can become a problem
+      // like infinite recursion of whatever.
+      // that we could handle using an object of pathname already seen but it will be useless
+      // because entryFolder is recursively traversed
 
-      const result = await callback(ressource, meta);
-      results.push(result);
+
       return null;
     }));
   };
 
-  await visitFolder();
+  await visitFolder(entryPathname);
   return results;
 };
 
-const readDirectory = dirname => new Promise((resolve, reject) => {
-  fs.readdir(dirname, (error, names) => {
+const pathnameToRelativePathname = (pathname, parentPathname) => {
+  return pathname.slice(parentPathname.length + 1);
+};
+
+const readDirectory = pathname => new Promise((resolve, reject) => {
+  fs.readdir(pathname, (error, names) => {
     if (error) {
       reject(error);
     } else {
@@ -345,8 +420,8 @@ const readDirectory = dirname => new Promise((resolve, reject) => {
   });
 });
 
-const readStat = filename => new Promise((resolve, reject) => {
-  fs.stat(filename, (error, stat) => {
+const readLStat = pathname => new Promise((resolve, reject) => {
+  fs.lstat(pathname, (error, stat) => {
     if (error) {
       reject(error);
     } else {
@@ -355,23 +430,23 @@ const readStat = filename => new Promise((resolve, reject) => {
   });
 });
 
-const patternGroupToMetaMap = patternGroup => {
-  const metaMap = {};
-  Object.keys(patternGroup).forEach(metaName => {
-    const valueMap = patternGroup[metaName];
-    Object.keys(valueMap).forEach(pattern => {
-      const value = valueMap[pattern];
+const namedValueDescriptionToMetaDescription = namedValueDescription => {
+  const metaDescription = {};
+  Object.keys(namedValueDescription).forEach(name => {
+    const valueDescription = namedValueDescription[name];
+    Object.keys(valueDescription).forEach(pattern => {
+      const value = valueDescription[pattern];
       const meta = {
-        [metaName]: value
+        [name]: value
       };
-      metaMap[pattern] = pattern in metaMap ? _objectSpread({}, metaMap[pattern], meta) : meta;
+      metaDescription[pattern] = pattern in metaDescription ? _objectSpread({}, metaDescription[pattern], meta) : meta;
     });
   });
-  return metaMap;
+  return metaDescription;
 };
 
-exports.forEachRessourceMatching = forEachRessourceMatching;
-exports.patternGroupToMetaMap = patternGroupToMetaMap;
-exports.ressourceCanContainsMetaMatching = ressourceCanContainsMetaMatching;
-exports.ressourceToMeta = ressourceToMeta;
+exports.selectAllFileInsideFolder = selectAllFileInsideFolder;
+exports.pathnameCanContainsMetaMatching = pathnameCanContainsMetaMatching;
+exports.pathnameToMeta = pathnameToMeta;
+exports.namedValueDescriptionToMetaDescription = namedValueDescriptionToMetaDescription;
 //# sourceMappingURL=index.js.map

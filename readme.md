@@ -4,14 +4,14 @@
 [![build](https://travis-ci.com/dmail/project-structure.svg?branch=master)](http://travis-ci.com/dmail/project-structure)
 [![codecov](https://codecov.io/gh/dmail/project-structure/branch/master/graph/badge.svg)](https://codecov.io/gh/dmail/project-structure)
 
-> Associate objects with patterns to describe a file structure
+> Describe your file structure using pattern and object.
 
 ## Example
 
 ```js
-import { ressourceToMeta } from "@dmail/project-structure"
+import { pathnameToMeta } from "@dmail/project-structure"
 
-const metaMap = {
+const metaDescription = {
   "*.js": {
     extension: "js",
   },
@@ -23,6 +23,6 @@ const metaMap = {
   },
 }
 
-ressourceToMeta(metaMap, "file.js") // { extension: "js", foo: true }
-ressourceToMeta(metaMap, "file.json") // { extension: "json" }
+pathnameToMeta({ pathname: "file.js", metaDescription }) // { extension: "js", foo: true }
+pathnameToMeta({ pathname: "file.json", metaDescription }) // { extension: "json" }
 ```

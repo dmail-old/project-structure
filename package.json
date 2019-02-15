@@ -11,7 +11,11 @@
   },
   "main": "dist/index.js",
   "module": "index.js",
-  "files": ["index.js", "src", "dist"],
+  "files": [
+    "index.js",
+    "src",
+    "dist"
+  ],
   "scripts": {
     "lint": "eslint .",
     "compile": "node ./script/compile.js",
@@ -25,21 +29,22 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@dmail/assert": "1.0.0",
-    "prettier": "1.15.3",
-    "codecov": "2.3.0",
-    "nyc": "11.2.1",
-    "rimraf": "2.6.2",
-    "eslint": "5.1.0",
-    "eslint-plugin-import": "2.6.0",
-    "babel-eslint": "9.0.0",
-    "rollup": "0.66.2",
-    "rollup-plugin-node-resolve": "3.4.0",
-    "rollup-plugin-babel": "4.0.3",
     "@babel/core": "7.1.0",
     "@babel/plugin-proposal-object-rest-spread": "7.0.0",
     "@babel/plugin-transform-spread": "7.0.0",
+    "@dmail/assert": "1.0.0",
+    "@dmail/cancellation": "github:dmail/cancellation#1.0",
     "@dmail/project-eslint-config": "github:dmail/project-eslint-config",
-    "@dmail/project-prettier-config": "github:dmail/project-prettier-config"
+    "@dmail/project-prettier-config": "github:dmail/project-prettier-config",
+    "babel-eslint": "9.0.0",
+    "codecov": "2.3.0",
+    "eslint": "5.1.0",
+    "eslint-plugin-import": "2.6.0",
+    "nyc": "11.2.1",
+    "prettier": "1.15.3",
+    "rimraf": "2.6.2",
+    "rollup": "0.66.2",
+    "rollup-plugin-babel": "4.0.3",
+    "rollup-plugin-node-resolve": "3.4.0"
   }
 }

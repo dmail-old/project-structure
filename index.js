@@ -1,4 +1,6 @@
-export { forEachRessourceMatching } from "./src/forEachRessourceMatching.js"
-export { patternGroupToMetaMap } from "./src/patternGroupToMetaMap.js"
-export { ressourceCanContainsMetaMatching } from "./src/ressourceCanContainsMetaMatching.js"
-export { ressourceToMeta } from "./src/ressourceToMeta.js"
+export { selectAllFileInsideFolder } from "./src/selectAllFileInsideFolder.js"
+export { pathnameCanContainsMetaMatching } from "./src/pathnameCanContainsMetaMatching.js"
+export { pathnameToMeta } from "./src/pathnameToMeta.js"
+export {
+  namedValueDescriptionToMetaDescription,
+} from "./src/namedValueDescriptionToMetaDescription.js"
