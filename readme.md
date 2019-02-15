@@ -4,7 +4,7 @@
 [![build](https://travis-ci.com/dmail/project-structure.svg?branch=master)](http://travis-ci.com/dmail/project-structure)
 [![codecov](https://codecov.io/gh/dmail/project-structure/branch/master/graph/badge.svg)](https://codecov.io/gh/dmail/project-structure)
 
-> Describe your file structure using pattern and object.
+> Associate data to file matching patterns
 
 ## Example
 
