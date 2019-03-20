@@ -5,120 +5,118 @@ import { pathnameToMeta } from "../../index.js"
 
 {
   const metaDescription = {
-    "**/a": { a: true },
+    "/**/a": { a: true },
   }
 
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a" }),
     expected: { a: true },
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "b/a" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/b/a" }),
     expected: { a: true },
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "c/b/a" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/c/b/a" }),
     expected: { a: true },
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a.js" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a.js" }),
     expected: {},
   })
 }
 
 {
   const metaDescription = {
-    "a/**": { a: true },
+    "/a/**": { a: true },
   }
 
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a" }),
     expected: {},
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a/b" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a/b" }),
     expected: { a: true },
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a/b/c" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a/b/c" }),
     expected: { a: true },
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a/a.js" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a/a.js" }),
     expected: { a: true },
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a.js" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a.js" }),
     expected: {},
   })
 }
 
 {
   const metaDescription = {
-    "**/a/**": { a: true },
+    "/**/a/**": { a: true },
   }
 
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a" }),
     expected: {},
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a/b" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a/b" }),
     expected: { a: true },
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "b/a/c" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/b/a/c" }),
     expected: { a: true },
   })
 }
 
 {
   const metaDescription = {
-    "**/*": { a: true },
+    "/**/*": { a: true },
   }
 
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a" }),
     expected: { a: true },
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "node_modules" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/node_modules" }),
     expected: { a: true },
   })
 }
 
 {
   const metaDescription = {
-    "a/**/*.test.js": { a: true },
+    "/a/**/*.test.js": { a: true },
   }
 
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a" }),
     expected: {},
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a/b.test.js" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a/b.test.js" }),
     expected: { a: true },
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a/b.js" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a/b.js" }),
     expected: {},
   })
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "a/b/c.test.js" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/a/b/c.test.js" }),
     expected: { a: true },
   })
 }
 
 {
   const metaDescription = {
-    "**/*.js": { a: true },
+    "/**/*.js": { a: true },
   }
 
   assert({
-    actual: pathnameToMeta({ metaDescription, pathname: "index.test.js" }),
+    actual: pathnameToMeta({ metaDescription, pathname: "/index.test.js" }),
     expected: { a: true },
   })
 }
-
-console.log("passed")

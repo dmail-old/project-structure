@@ -3,13 +3,13 @@ import { pathnameCanContainsMetaMatching } from "../../index.js"
 
 {
   const metaDescription = {
-    "a/b": { a: true },
+    "/a/b": { a: true },
   }
 
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "a",
+      pathname: "/a",
       predicate: (meta) => meta.a,
     }),
     expected: true,
@@ -17,7 +17,7 @@ import { pathnameCanContainsMetaMatching } from "../../index.js"
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "a/c",
+      pathname: "/a/c",
       predicate: (meta) => meta.a,
     }),
     expected: false,
@@ -25,7 +25,7 @@ import { pathnameCanContainsMetaMatching } from "../../index.js"
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "a/b",
+      pathname: "/a/b",
       predicate: (meta) => meta.a,
     }),
     expected: true,
@@ -34,13 +34,13 @@ import { pathnameCanContainsMetaMatching } from "../../index.js"
 
 {
   const metaDescription = {
-    "a/b*/c": { a: true },
+    "/a/b*/c": { a: true },
   }
 
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "a/bZ",
+      pathname: "/a/bZ",
       predicate: (meta) => meta.a,
     }),
     expected: true,
@@ -48,22 +48,7 @@ import { pathnameCanContainsMetaMatching } from "../../index.js"
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "a/bZ/c",
-      predicate: (meta) => meta.a,
-    }),
-    expected: true,
-  })
-}
-
-{
-  const metaDescription = {
-    "a/**/b.js": { a: true },
-  }
-
-  assert({
-    actual: pathnameCanContainsMetaMatching({
-      metaDescription,
-      pathname: "a/b/c",
+      pathname: "/a/bZ/c",
       predicate: (meta) => meta.a,
     }),
     expected: true,
@@ -72,14 +57,29 @@ import { pathnameCanContainsMetaMatching } from "../../index.js"
 
 {
   const metaDescription = {
-    "**/*": { a: true },
-    node_modules: { a: false }, // eslint-disable-line camelcase
+    "/a/**/b.js": { a: true },
   }
 
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "node_modules",
+      pathname: "/a/b/c",
+      predicate: (meta) => meta.a,
+    }),
+    expected: true,
+  })
+}
+
+{
+  const metaDescription = {
+    "/**/*": { a: true },
+    "/node_modules/": { a: false }, // eslint-disable-line camelcase
+  }
+
+  assert({
+    actual: pathnameCanContainsMetaMatching({
+      metaDescription,
+      pathname: "/node_modules",
       predicate: (meta) => meta.a,
     }),
     expected: false,
@@ -88,14 +88,14 @@ import { pathnameCanContainsMetaMatching } from "../../index.js"
 
 {
   const metaDescription = {
-    "**/*.js": { a: true },
-    "**/*.md": { a: false },
+    "/**/*.js": { a: true },
+    "/**/*.md": { a: false },
   }
 
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "src",
+      pathname: "/src",
       predicate: (meta) => meta.a,
     }),
     expected: true,
@@ -104,13 +104,13 @@ import { pathnameCanContainsMetaMatching } from "../../index.js"
 
 {
   const metaDescription = {
-    "**/*.js": { a: true },
+    "/**/*.js": { a: true },
   }
 
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "src/folder",
+      pathname: "/src/folder",
       predicate: (meta) => meta.a,
     }),
     expected: true,
@@ -118,7 +118,7 @@ import { pathnameCanContainsMetaMatching } from "../../index.js"
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "src/folder/subfolder",
+      pathname: "/src/folder/subfolder",
       predicate: (meta) => meta.a,
     }),
     expected: true,
@@ -127,13 +127,13 @@ import { pathnameCanContainsMetaMatching } from "../../index.js"
 
 {
   const metaDescription = {
-    "src/**/*.js": { a: true },
+    "/src/**/*.js": { a: true },
   }
 
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "src/jsCreateCompileService/compile",
+      pathname: "/src/jsCreateCompileService/compile",
       predicate: (meta) => meta.a,
     }),
     expected: true,

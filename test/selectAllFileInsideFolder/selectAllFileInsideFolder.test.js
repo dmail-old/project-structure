@@ -7,18 +7,19 @@ const projectFolder = path.resolve(__dirname, "../") // because runned from dist
 ;(async () => {
   {
     const metaDescription = {
-      "*.js": {
+      "/*.js": {
         source: true,
       },
-      subfolder: { source: true },
+      "/subfolder/": { source: true },
     }
 
-    const fileArray = await selectAllFileInsideFolder({
+    const filenameRelativeArray = await selectAllFileInsideFolder({
       pathname: `${projectFolder}/test/selectAllFileInsideFolder/folder`,
       metaDescription,
       predicate: ({ source }) => source,
+      transformFile: ({ filenameRelative }) => filenameRelative,
     })
-    const actual = fileArray.map(({ filenameRelative }) => filenameRelative).sort()
+    const actual = filenameRelativeArray.sort()
     const expected = ["a.js", "b.js", "subfolder/c.js"]
 
     assert({

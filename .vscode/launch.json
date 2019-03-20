@@ -5,7 +5,6 @@
       "name": "Launch with node",
       "type": "node",
       "protocol": "inspector",
-      "preLaunchTask": "compile",
       "request": "launch",
       "program": "${file}",
       "autoAttachChildProcesses": true,
@@ -29,6 +28,7 @@
       "args": ["${workspaceRoot}/dist/${relativeFile}"],
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
+      "smartStep": true,
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"
       },
