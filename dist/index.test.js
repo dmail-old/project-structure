@@ -1176,6 +1176,287 @@ const createAssertionError = (message) => {
   return error
 };
 
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
+function _objectSpread(target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i] != null ? arguments[i] : {};
+    var ownKeys = Object.keys(source);
+
+    if (typeof Object.getOwnPropertySymbols === 'function') {
+      ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(source, sym).enumerable;
+      }));
+    }
+
+    ownKeys.forEach(function (key) {
+      _defineProperty(target, key, source[key]);
+    });
+  }
+
+  return target;
+}
+
+// https://git-scm.com/docs/gitignore
+// https://github.com/kaelzhang/node-ignore
+
+/*
+{
+  matched: Boolean, // true false if value match
+  highestMatchingIndex: Number, // the index at which we were able to determine value matched or not
+}
+*/
+const pathnameMatch = ({
+  pattern,
+  pathname
+}) => {
+  if (typeof pattern !== "string") throw new TypeError(`pattern must be a string.
+pattern: ${pattern}`);
+  if (pattern[0] !== "/") throw new Error(`pattern must start with /.
+pattern: ${pattern}`);
+  if (typeof pathname !== "string") throw new TypeError(`pathname must be a string.
+pathname: ${pathname}`);
+  if (pathname[0] !== "/") throw new Error(`pathname must start with /.
+pathname: ${pathname}`);
+  return match({
+    pattern,
+    pathname
+  });
+};
+
+const match = ({
+  pattern,
+  pathname
+}) => {
+  let patternIndex = 0;
+  let pathnameIndex = 0;
+  let remainingPattern = pattern;
+  let remainingPathname = pathname; // eslint-disable-next-line no-constant-condition
+
+  while (true) {
+    //  '' === '' -> pass
+    if (remainingPattern === "" && remainingPathname === "") {
+      return pass({
+        patternIndex,
+        pathnameIndex
+      });
+    } // '' === value -> fail
+
+
+    if (remainingPattern === "" && remainingPathname !== "") {
+      return fail({
+        patternIndex,
+        pathnameIndex
+      });
+    } // pattern === '' -> pass only if pattern is only **
+
+
+    if (remainingPattern !== "" && remainingPathname === "") {
+      // pass because pattern is optionnal
+      if (remainingPattern === "**") {
+        return pass({
+          patternIndex,
+          pathnameIndex
+        });
+      } // fail because **/ would expect something like /a
+      // and **a would expect something like foo/bar/a
+
+
+      return fail({
+        patternIndex,
+        pathnameIndex
+      });
+    }
+
+    if (remainingPattern.slice(0, "**".length) === "**") {
+      patternIndex += `**`.length;
+      remainingPattern = remainingPattern.slice(`**`.length);
+
+      if (remainingPattern[0] === "/") {
+        patternIndex += "/".length;
+        remainingPattern = remainingPattern.slice("/".length);
+      } // pattern ending with ** always match remaining pathname
+
+
+      if (remainingPattern === "") {
+        return pass({
+          patternIndex,
+          pathnameIndex: pathname.length
+        });
+      }
+
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        pathname: remainingPathname
+      });
+
+      if (!skipResult.matched) {
+        return fail({
+          patternIndex: patternIndex + skipResult.patternIndex,
+          pathnameIndex: pathnameIndex + skipResult.pathnameIndex
+        });
+      }
+
+      return pass({
+        patternIndex: pattern.length,
+        pathnameIndex: pathname.length
+      });
+    }
+
+    if (remainingPattern[0] === "*") {
+      patternIndex += "*".length;
+      remainingPattern = remainingPattern.slice("*".length); // la c'est plus délicat, il faut que remainingPathname
+      // ne soit composé que de truc !== '/'
+
+      if (remainingPattern === "") {
+        const slashIndex = remainingPathname.indexOf("/");
+
+        if (slashIndex > -1) {
+          return fail({
+            patternIndex,
+            pathnameIndex: pathnameIndex + slashIndex
+          });
+        }
+
+        return pass({
+          patternIndex,
+          pathnameIndex: pathname.length
+        });
+      } // the next char must not the one expected by remainingPattern[0]
+      // because * is greedy and expect to skip one char
+
+
+      if (remainingPattern[0] === remainingPathname[0]) {
+        return fail({
+          patternIndex: patternIndex - "*".length,
+          pathnameIndex
+        });
+      }
+
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        pathname: remainingPathname,
+        skippablePredicate: remainingPathname => remainingPathname[0] !== "/"
+      });
+
+      if (!skipResult.matched) {
+        return fail({
+          patternIndex: patternIndex + skipResult.patternIndex,
+          pathnameIndex: pathnameIndex + skipResult.pathnameIndex
+        });
+      }
+
+      return pass({
+        patternIndex: pattern.length,
+        pathnameIndex: pathname.length
+      });
+    }
+
+    if (remainingPattern[0] !== remainingPathname[0]) {
+      return fail({
+        patternIndex,
+        pathnameIndex
+      });
+    } // trailing slash on pattern, -> match remaining
+
+
+    if (remainingPattern === "/" && remainingPathname.length > 1) {
+      return pass({
+        patternIndex: patternIndex + 1,
+        pathnameIndex: pathname.length
+      });
+    }
+
+    patternIndex += 1;
+    pathnameIndex += 1;
+    remainingPattern = remainingPattern.slice(1);
+    remainingPathname = remainingPathname.slice(1);
+    continue;
+  }
+};
+
+const skipUntilMatch = ({
+  pattern,
+  pathname,
+  skippablePredicate = () => true
+}) => {
+  let pathnameIndex = 0;
+  let remainingPathname = pathname;
+  let bestMatch = null; // eslint-disable-next-line no-constant-condition
+
+  while (true) {
+    const matchAttempt = match({
+      pattern,
+      pathname: remainingPathname
+    });
+
+    if (matchAttempt.matched) {
+      bestMatch = matchAttempt;
+      break;
+    }
+
+    const skippable = skippablePredicate(remainingPathname);
+    bestMatch = fail({
+      patternIndex: bestMatch ? Math.max(bestMatch.patternIndex, matchAttempt.patternIndex) : matchAttempt.patternIndex,
+      pathnameIndex: pathnameIndex + matchAttempt.pathnameIndex
+    });
+
+    if (!skippable) {
+      break;
+    } // search against the next unattempted pathname
+
+
+    pathnameIndex += matchAttempt.pathnameIndex + 1;
+    remainingPathname = remainingPathname.slice(matchAttempt.pathnameIndex + 1);
+
+    if (remainingPathname === "") {
+      bestMatch = _objectSpread({}, bestMatch, {
+        pathnameIndex: pathname.length
+      });
+      break;
+    }
+
+    continue;
+  }
+
+  return bestMatch;
+};
+
+const pass = ({
+  patternIndex,
+  pathnameIndex
+}) => {
+  return {
+    matched: true,
+    patternIndex,
+    pathnameIndex
+  };
+};
+
+const fail = ({
+  patternIndex,
+  pathnameIndex
+}) => {
+  return {
+    matched: false,
+    patternIndex,
+    pathnameIndex
+  };
+};
+
 // TODO: externalize this into '@dmail/helper'
 
 // https://github.com/tc39/proposal-cancellation/tree/master/stage0
@@ -1226,241 +1507,43 @@ const ensureExactParameters$1 = (extraParameters) => {
     throw new Error(`createOperation expect only cancellationToken, start. Got ${extraParamNames}`)
 };
 
-// https://git-scm.com/docs/gitignore
-// https://github.com/kaelzhang/node-ignore
-const pathnameMatch = ({
+const pathnameCanContainsMetaMatching = ({
   pathname,
-  pattern
+  metaDescription,
+  predicate
 }) => {
-  return match({
-    patterns: pattern.split("/"),
-    parts: pathname.split("/"),
-    lastPatternRequired: false,
-    lastSkipRequired: true,
-    skipPredicate: sequencePattern => sequencePattern === "**",
-    matchPart: (sequencePattern, sequencePart) => {
-      return match({
-        patterns: sequencePattern.split(""),
-        parts: sequencePart.split(""),
-        lastPatternRequired: true,
-        lastSkipRequired: false,
-        skipPredicate: charPattern => charPattern === "*",
-        matchPart: (charPattern, charSource) => {
-          const matched = charPattern === charSource;
-          return {
-            matched,
-            patternIndex: 0,
-            partIndex: 0,
-            matchIndex: matched ? 1 : 0
-          };
-        }
-      });
+  if (typeof pathname !== "string") throw new TypeError(`pathname must be a string, got ${pathname}`);
+  if (typeof metaDescription !== "object") throw new TypeError(`metaDescription must be an object, got ${metaDescription}`);
+  if (typeof predicate !== "function") throw new TypeError(`predicate must be a function, got ${predicate}`); // we add a trailing slash because we are intested into what will be inside
+  // this pathname, not the pathname itself
+  // it allows to match pattern for what is inside that pathname
+
+  const pathnameWithTrailingSlash = `${pathname}/`; // for full match we must create an object to allow pattern to override previous ones
+
+  let fullMatchMeta = {};
+  let someFullMatch = false; // for partial match, any meta satisfying predicate will be valid because
+  // we don't know for sure if pattern will still match for a file inside pathname
+
+  const partialMatchMetaArray = [];
+  Object.keys(metaDescription).forEach(pattern => {
+    const {
+      matched,
+      pathnameIndex
+    } = pathnameMatch({
+      pathname: pathnameWithTrailingSlash,
+      pattern
+    });
+
+    if (matched) {
+      someFullMatch = true;
+      fullMatchMeta = _objectSpread({}, fullMatchMeta, metaDescription[pattern]);
+    } else if (someFullMatch === false && pathnameIndex >= pathname.length) {
+      partialMatchMetaArray.push(metaDescription[pattern]);
     }
   });
+  if (someFullMatch) return Boolean(predicate(fullMatchMeta));
+  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
 };
-
-const match = ({
-  patterns,
-  parts,
-  skipPredicate,
-  lastSkipRequired,
-  lastPatternRequired,
-  matchPart,
-  skipUntilStartsMatching = false
-}) => {
-  let matched;
-  let patternIndex = 0;
-  let partIndex = 0;
-  let matchIndex = 0;
-
-  if (patterns.length === 0 && parts.length === 0) {
-    matched = true;
-  } else if (patterns.length === 0 && parts.length) {
-    matched = true;
-    matchIndex = parts.length;
-  } else if (patterns.length && parts.length === 0) {
-    matched = false;
-  } else {
-    matched = true; // eslint-disable-next-line no-constant-condition
-
-    while (true) {
-      const pattern = patterns[patternIndex];
-      const part = parts[partIndex];
-      const isSkipPattern = skipPredicate(pattern);
-      const isLastPattern = patternIndex === patterns.length - 1;
-      const isLastPart = partIndex === parts.length - 1;
-
-      if (isSkipPattern && isLastPart && isLastPattern) {
-        matchIndex += part.length;
-        break;
-      }
-
-      if (isSkipPattern && isLastPattern && isLastPart === false) {
-        matchIndex += part.length;
-        break;
-      }
-
-      if (isSkipPattern && isLastPattern === false && isLastPart) {
-        // test next pattern on current part
-        patternIndex++;
-        const nextPatternResult = match({
-          patterns: patterns.slice(patternIndex),
-          parts: parts.slice(partIndex),
-          skipPredicate,
-          lastSkipRequired,
-          lastPatternRequired,
-          matchPart
-        });
-        matched = nextPatternResult.matched;
-        patternIndex += nextPatternResult.patternIndex;
-        partIndex += nextPatternResult.partIndex;
-
-        if (matched && patternIndex === patterns.length - 1) {
-          matchIndex += nextPatternResult.matchIndex;
-          break;
-        }
-
-        if (matched && partIndex === parts.length - 1) {
-          matchIndex += nextPatternResult.matchIndex;
-          break;
-        }
-
-        if (matched) {
-          matchIndex += nextPatternResult.matchIndex;
-          continue;
-        } // we still increase the matchIndex by the length of the part because
-        // this part has matched even if the full pattern is not satisfied
-
-
-        matchIndex += part.length;
-        break;
-      }
-
-      if (isSkipPattern && isLastPattern === false && isLastPart === false) {
-        // test next pattern on current part
-        patternIndex++;
-        const skipResult = match({
-          patterns: patterns.slice(patternIndex),
-          parts: parts.slice(partIndex),
-          skipPredicate,
-          lastSkipRequired,
-          lastPatternRequired,
-          matchPart,
-          skipUntilStartsMatching: true
-        });
-        matched = skipResult.matched;
-        patternIndex += skipResult.patternIndex;
-        partIndex += skipResult.partIndex;
-        matchIndex += skipResult.matchIndex;
-
-        if (matched && patternIndex === patterns.length - 1) {
-          break;
-        }
-
-        if (matched && partIndex === parts.length - 1) {
-          break;
-        }
-
-        if (matched) {
-          continue;
-        }
-
-        break;
-      }
-
-      const partMatch = matchPart(pattern, part);
-      matched = partMatch.matched;
-      matchIndex += partMatch.matchIndex;
-
-      if (matched === false && skipUntilStartsMatching) {
-        matchIndex += part.length;
-      }
-
-      if (matched && isLastPattern && isLastPart) {
-        break;
-      }
-
-      if (matched && isLastPattern && isLastPart === false) {
-        if (lastPatternRequired) {
-          matched = false;
-        }
-
-        break;
-      }
-
-      if (matched && isLastPattern === false && isLastPart) {
-        const remainingPatternAreSkip = patterns.slice(patternIndex + 1).every(pattern => skipPredicate(pattern));
-
-        if (remainingPatternAreSkip && lastSkipRequired) {
-          matched = false;
-          break;
-        }
-
-        if (remainingPatternAreSkip === false) {
-          matched = false;
-          break;
-        }
-
-        break;
-      }
-
-      if (matched && isLastPattern === false && isLastPart === false) {
-        patternIndex++;
-        partIndex++;
-        continue;
-      }
-
-      if (matched === false && skipUntilStartsMatching && isLastPart === false) {
-        partIndex++; // keep searching for that pattern
-
-        continue;
-      }
-
-      break;
-    }
-  }
-
-  return {
-    matched,
-    matchIndex,
-    patternIndex,
-    partIndex
-  };
-};
-
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, {
-      value: value,
-      enumerable: true,
-      configurable: true,
-      writable: true
-    });
-  } else {
-    obj[key] = value;
-  }
-
-  return obj;
-}
-
-function _objectSpread(target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i] != null ? arguments[i] : {};
-    var ownKeys = Object.keys(source);
-
-    if (typeof Object.getOwnPropertySymbols === 'function') {
-      ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
-        return Object.getOwnPropertyDescriptor(source, sym).enumerable;
-      }));
-    }
-
-    ownKeys.forEach(function (key) {
-      _defineProperty(target, key, source[key]);
-    });
-  }
-
-  return target;
-}
 
 const pathnameToMeta = ({
   pathname,
@@ -1477,55 +1560,27 @@ const pathnameToMeta = ({
   }, {});
 };
 
-const pathnameCanContainsMetaMatching = ({
-  pathname,
-  metaDescription,
-  predicate
-}) => {
-  if (typeof pathname !== "string") throw new TypeError(`pathname must be a string, got ${pathname}`);
-  if (typeof metaDescription !== "object") throw new TypeError(`metaDescription must be an object, got ${metaDescription}`);
-  if (typeof predicate !== "function") throw new TypeError(`predicate must be a function, got ${predicate}`);
-  const matchIndexForFolder = pathname.split("/").join("").length;
-  const partialMatch = Object.keys(metaDescription).some(pattern => {
-    const {
-      matched,
-      matchIndex
-    } = pathnameMatch({
-      pathname,
-      pattern
-    });
-    return matched === false && matchIndex >= matchIndexForFolder && predicate(metaDescription[pattern]);
-  });
-  if (partialMatch) return true; // no partial match satisfies predicate, does it work on a full match ?
-
-  const meta = pathnameToMeta({
-    pathname,
-    metaDescription
-  });
-  return Boolean(predicate(meta));
-};
-
 const selectAllFileInsideFolder = async ({
   cancellationToken = createCancellationToken(),
-  pathname: entryPathname,
+  pathname: rootFolderPathname,
   metaDescription,
   predicate,
   transformFile = file => file
 }) => {
-  if (typeof entryPathname !== "string") throw new TypeError(`pathname must be a string, got ${entryPathname}`);
+  if (typeof rootFolderPathname !== "string") throw new TypeError(`pathname must be a string, got ${rootFolderPathname}`);
   if (typeof metaDescription !== "object") throw new TypeError(`metaMap must be a object, got ${metaDescription}`);
   if (typeof predicate !== "function") throw new TypeError(`predicate must be a function, got ${predicate}`);
   if (typeof transformFile !== "function") throw new TypeError(`transformFile must be a function, got ${transformFile}`);
   const results = [];
 
-  const visitFolder = async folderPathname => {
-    const names = await createOperation({
+  const visitFolder = async folder => {
+    const folderBasenameArray = await createOperation({
       cancellationToken,
-      start: () => readDirectory(folderPathname)
+      start: () => readDirectory(folder)
     });
-    await Promise.all(names.map(async name => {
-      const pathname = `${folderPathname}/${name}`;
-      const pathnameRelative = pathnameToRelativePathname(pathname, entryPathname);
+    await Promise.all(folderBasenameArray.map(async basename => {
+      const pathname = `${folder}/${basename}`;
+      const pathnameRelative = pathnameToRelativePathname(pathname, rootFolderPathname);
       const lstat = await createOperation({
         cancellationToken,
         start: () => readLStat(pathname)
@@ -1553,7 +1608,7 @@ const selectAllFileInsideFolder = async ({
         const result = await createOperation({
           cancellationToken,
           start: () => transformFile({
-            filenameRelative: pathnameRelative,
+            filenameRelative: pathnameRelative.slice(1),
             meta,
             lstat
           })
@@ -1572,12 +1627,12 @@ const selectAllFileInsideFolder = async ({
     }));
   };
 
-  await visitFolder(entryPathname);
+  await visitFolder(rootFolderPathname);
   return results;
 };
 
 const pathnameToRelativePathname = (pathname, parentPathname) => {
-  return pathname.slice(parentPathname.length + 1);
+  return pathname.slice(parentPathname.length);
 };
 
 const readDirectory = pathname => new Promise((resolve, reject) => {
@@ -1601,15 +1656,715 @@ const readLStat = pathname => new Promise((resolve, reject) => {
 });
 
 {
+  const actual = pathnameMatch({
+    pathname: "/foo.js",
+    pattern: "/foo.js"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 7,
+    pathnameIndex: 7
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pathname: "/foo.js",
+    pattern: "/bar.js"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 1,
+    pathnameIndex: 1
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+
+{
+  const actual = pathnameMatch({
+    pattern: "/a*",
+    pathname: "/a"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 2,
+    pathnameIndex: 2
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a*",
+    pathname: "/aZ"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 3,
+    pathnameIndex: 3
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a*",
+    pathname: "/aZZZ"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 3,
+    pathnameIndex: 5
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a*",
+    pathname: "/Za"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 1,
+    pathnameIndex: 1
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+
+{
+  const actual = pathnameMatch({
+    pattern: "/*a",
+    pathname: "/a"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 1,
+    pathnameIndex: 1
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/*a",
+    pathname: "/Za"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 3,
+    pathnameIndex: 3
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/*a",
+    pathname: "/ZZZa"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 3,
+    pathnameIndex: 5
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/*a",
+    pathname: "/aZ"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 1,
+    pathnameIndex: 1
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+
+{
+  const actual = pathnameMatch({
+    pattern: "/*a*",
+    pathname: "/abc"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 1,
+    pathnameIndex: 1
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/*a*",
+    pathname: "/Za"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 3,
+    pathnameIndex: 3
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/*a*",
+    pathname: "/aZ"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 1,
+    pathnameIndex: 1
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/*a*",
+    pathname: "/ZZa"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 3,
+    pathnameIndex: 4
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/*a*",
+    pathname: "/aZZ"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 1,
+    pathnameIndex: 1
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/*a*",
+    pathname: "/ZaZ"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 4,
+    pathnameIndex: 4
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/*a*",
+    pathname: "/ZZaZZ"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 4,
+    pathnameIndex: 6
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+
+{
+  const actual = pathnameMatch({
+    pattern: "/a*bc",
+    pathname: "/abc"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 2,
+    pathnameIndex: 2
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a*bc",
+    pathname: "/aZZbc"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 5,
+    pathnameIndex: 6
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a*bc",
+    pathname: "/aZZbd"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 4,
+    pathnameIndex: 6
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a/b*/c",
+    pathname: "/a/bZ/c"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 7,
+    pathnameIndex: 7
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a/b*/c",
+    pathname: "/a/b/c"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 4,
+    pathnameIndex: 4
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+
+{
+  const actual = pathnameMatch({
+    pattern: "/a/**",
+    pathname: "/a"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 2,
+    pathnameIndex: 2
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a/**",
+    pathname: "/a/b"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 5,
+    pathnameIndex: 4
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a/**",
+    pathname: "/a/b/c"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 5,
+    pathnameIndex: 6
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a/**",
+    pathname: "/a/a.js"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 5,
+    pathnameIndex: 7
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a/**",
+    pathname: "/a.js"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 2,
+    pathnameIndex: 2
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+
+{
+  const actual = pathnameMatch({
+    pattern: "/**/a",
+    pathname: "/a"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 5,
+    pathnameIndex: 2
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/**/a/",
+    pathname: "/a"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 5,
+    pathnameIndex: 2
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/**/a",
+    pathname: "/b/a"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 5,
+    pathnameIndex: 4
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/**/a",
+    pathname: "/c/b/a"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 5,
+    pathnameIndex: 6
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/**/a",
+    pathname: "/a.js"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 5,
+    pathnameIndex: 5
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+
+{
+  const actual = pathnameMatch({
+    pattern: "/**/a/**/",
+    pathname: "/a"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 5,
+    pathnameIndex: 2
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/**/a/**/",
+    pathname: "/a/b/c.js"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 9,
+    pathnameIndex: 9
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/**/a/**/",
+    pathname: "/b/a/c.js"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 9,
+    pathnameIndex: 9
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+
+{
+  const actual = pathnameMatch({
+    pathname: "/a/b/c",
+    pattern: "/a/**/b/c"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 9,
+    pathnameIndex: 6
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+
+{
+  const actual = pathnameMatch({
+    pathname: "/file.json",
+    pattern: "/*.js"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 5,
+    pathnameIndex: 10
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pathname: "/folder/file.js",
+    pattern: "/**/*.js"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 8,
+    pathnameIndex: 15
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pathname: "/folder/file.json",
+    pattern: "/**/*.js"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 8,
+    pathnameIndex: 17
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pattern: "/a/b*/c",
+    pathname: "/a/bZ"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 5,
+    pathnameIndex: 5
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pathname: "/folder/file.test.js",
+    pattern: "/**/*.test.*"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 12,
+    pathnameIndex: 20
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pathname: "/file.es5.js/file.es5.js.map",
+    pattern: "/**/*.js"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 8,
+    pathnameIndex: 28
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pathname: "/src/folder/file",
+    pattern: "/src/**/*.js"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 9,
+    pathnameIndex: 16
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pathname: "/src/folder/file.js",
+    pattern: "/src/**/*.js"
+  });
+  const expected = {
+    matched: true,
+    patternIndex: 12,
+    pathnameIndex: 19
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pathname: "/src/folder/file.json",
+    pattern: "/src/**/*.js"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 12,
+    pathnameIndex: 21
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+{
+  const actual = pathnameMatch({
+    pathname: "/src/folder",
+    pattern: "/src/**/*.js"
+  });
+  const expected = {
+    matched: false,
+    patternIndex: 9,
+    pathnameIndex: 11
+  };
+  assert({
+    actual,
+    expected
+  });
+}
+
+{
   const metaDescription = {
-    "a/b": {
+    "/a/b": {
       a: true
     }
   };
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "a",
+      pathname: "/a",
       predicate: meta => meta.a
     }),
     expected: true
@@ -1617,7 +2372,7 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "a/c",
+      pathname: "/a/c",
       predicate: meta => meta.a
     }),
     expected: false
@@ -1625,7 +2380,7 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "a/b",
+      pathname: "/a/b",
       predicate: meta => meta.a
     }),
     expected: true
@@ -1633,14 +2388,14 @@ const readLStat = pathname => new Promise((resolve, reject) => {
 }
 {
   const metaDescription = {
-    "a/b*/c": {
+    "/a/b*/c": {
       a: true
     }
   };
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "a/bZ",
+      pathname: "/a/bZ",
       predicate: meta => meta.a
     }),
     expected: true
@@ -1648,7 +2403,7 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "a/bZ/c",
+      pathname: "/a/bZ/c",
       predicate: meta => meta.a
     }),
     expected: true
@@ -1656,14 +2411,14 @@ const readLStat = pathname => new Promise((resolve, reject) => {
 }
 {
   const metaDescription = {
-    "a/**/b.js": {
+    "/a/**/b.js": {
       a: true
     }
   };
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "a/b/c",
+      pathname: "/a/b/c",
       predicate: meta => meta.a
     }),
     expected: true
@@ -1671,10 +2426,10 @@ const readLStat = pathname => new Promise((resolve, reject) => {
 }
 {
   const metaDescription = {
-    "**/*": {
+    "/**/*": {
       a: true
     },
-    node_modules: {
+    "/node_modules/": {
       a: false
     } // eslint-disable-line camelcase
 
@@ -1682,7 +2437,7 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "node_modules",
+      pathname: "/node_modules",
       predicate: meta => meta.a
     }),
     expected: false
@@ -1690,17 +2445,17 @@ const readLStat = pathname => new Promise((resolve, reject) => {
 }
 {
   const metaDescription = {
-    "**/*.js": {
+    "/**/*.js": {
       a: true
     },
-    "**/*.md": {
+    "/**/*.md": {
       a: false
     }
   };
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "src",
+      pathname: "/src",
       predicate: meta => meta.a
     }),
     expected: true
@@ -1708,14 +2463,14 @@ const readLStat = pathname => new Promise((resolve, reject) => {
 }
 {
   const metaDescription = {
-    "**/*.js": {
+    "/**/*.js": {
       a: true
     }
   };
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "src/folder",
+      pathname: "/src/folder",
       predicate: meta => meta.a
     }),
     expected: true
@@ -1723,7 +2478,7 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "src/folder/subfolder",
+      pathname: "/src/folder/subfolder",
       predicate: meta => meta.a
     }),
     expected: true
@@ -1731,14 +2486,14 @@ const readLStat = pathname => new Promise((resolve, reject) => {
 }
 {
   const metaDescription = {
-    "src/**/*.js": {
+    "/src/**/*.js": {
       a: true
     }
   };
   assert({
     actual: pathnameCanContainsMetaMatching({
       metaDescription,
-      pathname: "src/jsCreateCompileService/compile",
+      pathname: "/src/jsCreateCompileService/compile",
       predicate: meta => meta.a
     }),
     expected: true
@@ -1748,14 +2503,14 @@ const readLStat = pathname => new Promise((resolve, reject) => {
 // https://github.com/kaelzhang/node-ignore
 {
   const metaDescription = {
-    "**/a": {
+    "/**/a": {
       a: true
     }
   };
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a"
+      pathname: "/a"
     }),
     expected: {
       a: true
@@ -1764,7 +2519,7 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "b/a"
+      pathname: "/b/a"
     }),
     expected: {
       a: true
@@ -1773,7 +2528,7 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "c/b/a"
+      pathname: "/c/b/a"
     }),
     expected: {
       a: true
@@ -1782,28 +2537,28 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a.js"
+      pathname: "/a.js"
     }),
     expected: {}
   });
 }
 {
   const metaDescription = {
-    "a/**": {
+    "/a/**": {
       a: true
     }
   };
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a"
+      pathname: "/a"
     }),
     expected: {}
   });
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a/b"
+      pathname: "/a/b"
     }),
     expected: {
       a: true
@@ -1812,7 +2567,7 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a/b/c"
+      pathname: "/a/b/c"
     }),
     expected: {
       a: true
@@ -1821,7 +2576,7 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a/a.js"
+      pathname: "/a/a.js"
     }),
     expected: {
       a: true
@@ -1830,28 +2585,28 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a.js"
+      pathname: "/a.js"
     }),
     expected: {}
   });
 }
 {
   const metaDescription = {
-    "**/a/**": {
+    "/**/a/**": {
       a: true
     }
   };
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a"
+      pathname: "/a"
     }),
     expected: {}
   });
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a/b"
+      pathname: "/a/b"
     }),
     expected: {
       a: true
@@ -1860,32 +2615,7 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "b/a/c"
-    }),
-    expected: {
-      a: true
-    }
-  });
-}
-{
-  const metaDescription = {
-    "**/*": {
-      a: true
-    }
-  };
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "a"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "node_modules"
+      pathname: "/b/a/c"
     }),
     expected: {
       a: true
@@ -1894,21 +2624,14 @@ const readLStat = pathname => new Promise((resolve, reject) => {
 }
 {
   const metaDescription = {
-    "a/**/*.test.js": {
+    "/**/*": {
       a: true
     }
   };
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a"
-    }),
-    expected: {}
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "a/b.test.js"
+      pathname: "/a"
     }),
     expected: {
       a: true
@@ -1917,14 +2640,7 @@ const readLStat = pathname => new Promise((resolve, reject) => {
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a/b.js"
-    }),
-    expected: {}
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "a/b/c.test.js"
+      pathname: "/node_modules"
     }),
     expected: {
       a: true
@@ -1933,39 +2649,63 @@ const readLStat = pathname => new Promise((resolve, reject) => {
 }
 {
   const metaDescription = {
-    "**/*.js": {
+    "/a/**/*.test.js": {
       a: true
     }
   };
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "index.test.js"
+      pathname: "/a"
+    }),
+    expected: {}
+  });
+  assert({
+    actual: pathnameToMeta({
+      metaDescription,
+      pathname: "/a/b.test.js"
+    }),
+    expected: {
+      a: true
+    }
+  });
+  assert({
+    actual: pathnameToMeta({
+      metaDescription,
+      pathname: "/a/b.js"
+    }),
+    expected: {}
+  });
+  assert({
+    actual: pathnameToMeta({
+      metaDescription,
+      pathname: "/a/b/c.test.js"
     }),
     expected: {
       a: true
     }
   });
 }
-console.log("passed");
+{
+  const metaDescription = {
+    "/**/*.js": {
+      a: true
+    }
+  };
+  assert({
+    actual: pathnameToMeta({
+      metaDescription,
+      pathname: "/index.test.js"
+    }),
+    expected: {
+      a: true
+    }
+  });
+}
 
 {
   const metaDescription = {
-    foo: {
-      a: true
-    }
-  };
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: ""
-    }),
-    expected: {}
-  });
-}
-{
-  const metaDescription = {
-    foo: {
+    "/foo": {
       a: true
     }
   };
@@ -1979,14 +2719,28 @@ console.log("passed");
 }
 {
   const metaDescription = {
-    foo: {
+    "/foo": {
       a: true
     }
   };
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "foo"
+      pathname: "/"
+    }),
+    expected: {}
+  });
+}
+{
+  const metaDescription = {
+    "/foo": {
+      a: true
+    }
+  };
+  assert({
+    actual: pathnameToMeta({
+      metaDescription,
+      pathname: "/foo"
     }),
     expected: {
       a: true
@@ -1995,14 +2749,14 @@ console.log("passed");
 }
 {
   const metaDescription = {
-    a: {
+    "/a": {
       a: true
     }
   };
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a"
+      pathname: "/a"
     }),
     expected: {
       a: true
@@ -2011,39 +2765,35 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a.js"
+      pathname: "/a.js"
     }),
     expected: {}
   });
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a/b"
+      pathname: "/a/b"
     }),
-    expected: {
-      a: true
-    }
+    expected: {}
   });
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a/b.js"
+      pathname: "/a/b.js"
     }),
-    expected: {
-      a: true
-    }
+    expected: {}
   });
 }
 {
   const metaDescription = {
-    "b/a": {
+    "/b/a": {
       a: true
     }
   };
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "b/a"
+      pathname: "/b/a"
     }),
     expected: {
       a: true
@@ -2052,37 +2802,35 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "b/a.js"
+      pathname: "/b/a.js"
     }),
     expected: {}
   });
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "b/c"
+      pathname: "/b/c"
     }),
     expected: {}
   });
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "b/a/c"
+      pathname: "/b/a/c"
     }),
-    expected: {
-      a: true
-    }
+    expected: {}
   });
 }
 {
   const metaDescription = {
-    dist: {
+    "/dist": {
       a: 0
     }
   };
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "dist"
+      pathname: "/dist"
     }),
     expected: {
       a: 0
@@ -2091,26 +2839,23 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "a/dist"
+      pathname: "/a/dist"
     }),
     expected: {}
   });
 }
-console.log("passed");
 
 {
   const metaDescription = {
-    "**/*.js": {
+    "/**/*.js": {
       js: true
     }
   };
   const actual = pathnameToMeta({
     metaDescription,
-    pathname: "file.es5.js/file.es5.js.map"
+    pathname: "/file.es5.js/file.es5.js.map"
   });
-  const expected = {
-    js: true
-  };
+  const expected = {};
   assert({
     actual,
     expected
@@ -2118,16 +2863,16 @@ console.log("passed");
 }
 {
   const metaDescription = {
-    "**/*.js": {
+    "/**/*.js": {
       js: true
     },
-    "**/*.js/**": {
+    "/**/*.js/**": {
       js: false
     }
   };
   const actual = pathnameToMeta({
     metaDescription,
-    pathname: "file.es5.js/file.es5.js.map"
+    pathname: "/file.es5.js/file.es5.js.map"
   });
   const expected = {
     js: false
@@ -2139,13 +2884,13 @@ console.log("passed");
 }
 {
   const metaDescription = {
-    "**/*.js": {
+    "/**/*.js": {
       js: true
     }
   };
   const actual = pathnameToMeta({
     metaDescription,
-    pathname: "file.js.map"
+    pathname: "/file.js.map"
   });
   const expected = {};
   assert({
@@ -2155,23 +2900,23 @@ console.log("passed");
 }
 {
   const metaDescription = {
-    "**/*.js": {
+    "/**/*.js": {
       format: true
     },
-    "**/*.jsx": {
+    "/**/*.jsx": {
       format: true
     },
-    build: {
+    "/build": {
       format: false
     },
-    "src/exception.js": {
+    "/src/exception.js": {
       format: false
     }
   };
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "index.js"
+      pathname: "/index.js"
     }),
     expected: {
       format: true
@@ -2180,7 +2925,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "src/file.js"
+      pathname: "/src/file.js"
     }),
     expected: {
       format: true
@@ -2189,7 +2934,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "src/folder/file.js"
+      pathname: "/src/folder/file.js"
     }),
     expected: {
       format: true
@@ -2198,7 +2943,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "index.test.js"
+      pathname: "/index.test.js"
     }),
     expected: {
       format: true
@@ -2207,7 +2952,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "src/file.test.js"
+      pathname: "/src/file.test.js"
     }),
     expected: {
       format: true
@@ -2216,7 +2961,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "src/folder/file.test.js"
+      pathname: "/src/folder/file.test.js"
     }),
     expected: {
       format: true
@@ -2225,7 +2970,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "src/exception.js"
+      pathname: "/src/exception.js"
     }),
     expected: {
       format: false
@@ -2234,32 +2979,32 @@ console.log("passed");
 }
 {
   const metaDescription = {
-    "index.js": {
+    "/index.js": {
       cover: true
     },
-    "src/**/*.js": {
+    "/src/**/*.js": {
       cover: true
     },
-    "src/**/*.jsx": {
+    "/src/**/*.jsx": {
       cover: true
     },
-    "**/*.test.js": {
+    "/**/*.test.js": {
       cover: false
     },
-    "**/*.test.jsx": {
+    "/**/*.test.jsx": {
       cover: false
     },
-    build: {
+    "/build/": {
       cover: false
     },
-    "src/exception.js": {
+    "/src/exception.js": {
       cover: false
     }
   };
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "index.js"
+      pathname: "/index.js"
     }),
     expected: {
       cover: true
@@ -2268,7 +3013,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "src/file.js"
+      pathname: "/src/file.js"
     }),
     expected: {
       cover: true
@@ -2277,7 +3022,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "src/folder/file.js"
+      pathname: "/src/folder/file.js"
     }),
     expected: {
       cover: true
@@ -2286,7 +3031,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "index.test.js"
+      pathname: "/index.test.js"
     }),
     expected: {
       cover: false
@@ -2295,7 +3040,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "src/file.test.js"
+      pathname: "/src/file.test.js"
     }),
     expected: {
       cover: false
@@ -2304,7 +3049,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "src/folder/file.test.js"
+      pathname: "/src/folder/file.test.js"
     }),
     expected: {
       cover: false
@@ -2313,7 +3058,7 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "build/index.js"
+      pathname: "/build/index.js"
     }),
     expected: {
       cover: false
@@ -2322,196 +3067,11 @@ console.log("passed");
   assert({
     actual: pathnameToMeta({
       metaDescription,
-      pathname: "src/exception.js"
+      pathname: "/src/exception.js"
     }),
     expected: {
       cover: false
     }
-  });
-}
-
-{
-  const metaDescription = {
-    "*a": {
-      a: true
-    }
-  };
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "a"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "Za"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "ZZZa"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "aZ"
-    }),
-    expected: {}
-  });
-}
-{
-  const metaDescription = {
-    "a*": {
-      a: true
-    }
-  };
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "a"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "aZ"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "aZZZ"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "Za"
-    }),
-    expected: {}
-  });
-}
-{
-  const metaDescription = {
-    "*a*": {
-      a: true
-    }
-  };
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "a"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "Za"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "aZ"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "ZZa"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "aZZ"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "ZaZ"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "ZZaZZ"
-    }),
-    expected: {
-      a: true
-    }
-  });
-}
-{
-  const metaDescription = {
-    "a*bc": {
-      a: true
-    }
-  };
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "abc"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "aZZbc"
-    }),
-    expected: {
-      a: true
-    }
-  });
-  assert({
-    actual: pathnameToMeta({
-      metaDescription,
-      pathname: "aZZbd"
-    }),
-    expected: {}
   });
 }
 
@@ -2521,23 +3081,24 @@ const projectFolder = path.resolve(__dirname, "../") // because runned from dist
 (async () => {
   {
     const metaDescription = {
-      "*.js": {
+      "/*.js": {
         source: true
       },
-      subfolder: {
+      "/subfolder/": {
         source: true
       }
     };
-    const fileArray = await selectAllFileInsideFolder({
+    const filenameRelativeArray = await selectAllFileInsideFolder({
       pathname: `${projectFolder}/test/selectAllFileInsideFolder/folder`,
       metaDescription,
       predicate: ({
         source
-      }) => source
+      }) => source,
+      transformFile: ({
+        filenameRelative
+      }) => filenameRelative
     });
-    const actual = fileArray.map(({
-      filenameRelative
-    }) => filenameRelative).sort();
+    const actual = filenameRelativeArray.sort();
     const expected = ["a.js", "b.js", "subfolder/c.js"];
     assert({
       actual,
@@ -2545,4 +3106,8 @@ const projectFolder = path.resolve(__dirname, "../") // because runned from dist
     });
   }
 })();
+
+// say somewhere in the readme it's inspired from importMap sepc
+
+console.log("tests ok");
 //# sourceMappingURL=index.test.js.map
