@@ -27,15 +27,16 @@
     "prepublishOnly": "npm run dist",
     "reinstall": "npm run clean && rimraf node_modules && npm install"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@dmail/cancellation": "1.0.0"
+  },
   "devDependencies": {
     "@babel/core": "7.2.2",
     "@babel/plugin-proposal-object-rest-spread": "7.0.0",
     "@babel/plugin-transform-spread": "7.0.0",
     "@dmail/assert": "1.0.0",
-    "@dmail/cancellation": "github:dmail/cancellation#1.0",
-    "@dmail/project-eslint-config": "github:dmail/project-eslint-config",
-    "@dmail/project-prettier-config": "github:dmail/project-prettier-config",
+    "@jsenv/eslint-config": "8.0.0",
+    "@jsenv/prettier-config": "1.0.0",
     "babel-eslint": "9.0.0",
     "codecov": "2.3.0",
     "eslint": "5.1.0",

@@ -1,6 +1,6 @@
 # project-structure
 
-[![npm](https://badge.fury.io/js/%40dmail%2Fproject-structure.svg)](https://badge.fury.io/js/%40dmail%2Fproject-structure)
+[![npm package](https://img.shields.io/npm/v/@dmail/project-structure.svg)](https://www.npmjs.com/package/@dmail/project-structure)
 [![build](https://travis-ci.com/dmail/project-structure.svg?branch=master)](http://travis-ci.com/dmail/project-structure)
 [![codecov](https://codecov.io/gh/dmail/project-structure/branch/master/graph/badge.svg)](https://codecov.io/gh/dmail/project-structure)
 
