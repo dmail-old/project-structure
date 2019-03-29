@@ -1,30 +1,25 @@
-import path from "path"
-import { assert } from "@dmail/assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { selectAllFileInsideFolder } from "../../index.js"
 
-const projectFolder = path.resolve(__dirname, "../") // because runned from dist
+const { projectFolder } = import.meta.require("../../jsenv.config.js")
 
-;(async () => {
-  {
-    const metaDescription = {
-      "/*.js": {
-        source: true,
-      },
-      "/subfolder/": { source: true },
-    }
+const metaDescription = {
+  "/*.js": {
+    source: true,
+  },
+  "/subfolder/": { source: true },
+}
 
-    const filenameRelativeArray = await selectAllFileInsideFolder({
-      pathname: `${projectFolder}/test/selectAllFileInsideFolder/folder`,
-      metaDescription,
-      predicate: ({ source }) => source,
-      transformFile: ({ filenameRelative }) => filenameRelative,
-    })
-    const actual = filenameRelativeArray.sort()
-    const expected = ["a.js", "b.js", "subfolder/c.js"]
+const filenameRelativeArray = await selectAllFileInsideFolder({
+  pathname: `${projectFolder}/test/selectAllFileInsideFolder/folder`,
+  metaDescription,
+  predicate: ({ source }) => source,
+  transformFile: ({ filenameRelative }) => filenameRelative,
+})
+const actual = filenameRelativeArray.sort()
+const expected = ["a.js", "b.js", "subfolder/c.js"]
 
-    assert({
-      actual,
-      expected,
-    })
-  }
-})()
+assert({
+  actual,
+  expected,
+})

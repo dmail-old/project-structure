@@ -1,5 +1,8 @@
 import fs from "fs"
-import { createCancellationToken, createOperation } from "@dmail/cancellation"
+import {
+  createCancellationToken,
+  createOperation,
+} from "/node_modules/@dmail/cancellation/index.js"
 import { pathnameCanContainsMetaMatching } from "./pathnameCanContainsMetaMatching.js"
 import { pathnameToMeta } from "./pathnameToMeta.js"
 
@@ -14,7 +17,7 @@ export const selectAllFileInsideFolder = async ({
   if (typeof rootFolderPathname !== "string")
     throw new TypeError(`pathname must be a string, got ${rootFolderPathname}`)
   if (typeof metaDescription !== "object")
-    throw new TypeError(`metaMap must be a object, got ${metaDescription}`)
+    throw new TypeError(`metaDescription must be a object, got ${metaDescription}`)
   if (typeof predicate !== "function")
     throw new TypeError(`predicate must be a function, got ${predicate}`)
   if (typeof transformFile !== "function")

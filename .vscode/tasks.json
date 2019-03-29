@@ -5,12 +5,13 @@
   "tasks": [
     {
       "type": "npm",
-      "script": "dist",
-      "label": "dist",
+      "script": "compile",
+      "label": "compile",
       "presentation": {
         "reveal": "silent",
         "panel": "shared"
-      }
+      },
+      "problemMatcher": []
     }
   ]
 }
