@@ -1,8 +1,5 @@
 import fs from "fs"
-import {
-  createCancellationToken,
-  createOperation,
-} from "/node_modules/@dmail/cancellation/index.js"
+import { createCancellationToken, createOperation } from "@dmail/cancellation"
 import { pathnameCanContainsMetaMatching } from "./pathnameCanContainsMetaMatching.js"
 import { pathnameToMeta } from "./pathnameToMeta.js"
 

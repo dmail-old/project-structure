@@ -1,10 +1,5 @@
 const { execute, launchNode } = require("@jsenv/core")
-const {
-  importMap,
-  projectFolder,
-  compileInto,
-  babelPluginDescription,
-} = require("../../jsenv.config.js")
+const { importMap, projectFolder, compileInto, babelConfigMap } = require("../../jsenv.config.js")
 const { getFromProcessArguments } = require("./getFromProcessArguments.js")
 
 const filenameRelative = getFromProcessArguments("file")
@@ -13,7 +8,7 @@ execute({
   importMap,
   projectFolder,
   compileInto,
-  babelPluginDescription,
+  babelConfigMap,
   protocol: "http",
   launch: (options) =>
     launchNode({
@@ -25,7 +20,7 @@ execute({
       // as a workaround, the debug port is static
       // and there is a .vscode/launch.json/#jsenv-node-attach-child
       // that you can use to reattach a debugger to this port
-      debugPort: 40010,
+      debugPort: 40000,
     }),
   filenameRelative,
   verbose: false,

@@ -1,6 +1,6 @@
 {
   "name": "@dmail/project-structure",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "licence": "MIT",
   "repository": {
     "type": "git",
@@ -20,11 +20,11 @@
     "@dmail/cancellation": "2.1.0"
   },
   "devDependencies": {
-    "@jsenv/core": "4.14.0",
+    "@jsenv/core": "5.2.0",
     "@jsenv/eslint-config": "8.0.0",
-    "@jsenv/eslint-import-resolver": "2.0.0",
+    "@jsenv/eslint-import-resolver": "4.1.0",
     "@jsenv/prettier-config": "1.0.0",
-    "@jsenv/babel-plugin-description": "2.0.0",
+    "@jsenv/babel-config-map": "1.0.0",
     "@dmail/assert": "3.0.0",
     "babel-eslint": "11.0.0-beta.0",
     "prettier": "1.15.3",
@@ -40,7 +40,6 @@
     "test": "node ./script/test/test.js",
     "generate-coverage": "node ./script/generate-coverage/generate-coverage.js",
     "upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
-    "start-browsing-server": "node ./script/start-browsing-server/start-browsing-server.js",
     "clean": "rimraf dist && rimraf coverage",
     "bundle-node": "node ./script/bundle-node/bundle-node.js",
     "dist": "npm run clean && npm run bundle-node",

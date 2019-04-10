@@ -1,4 +1,4 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
+import { assert } from "@dmail/assert"
 import { selectAllFileInsideFolder } from "../../index.js"
 
 const { projectFolder } = import.meta.require("../../jsenv.config.js")
