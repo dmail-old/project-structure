@@ -1,17 +1,16 @@
+import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
 import { selectAllFileInsideFolder } from "../../index.js"
 
-const { projectFolder } = import.meta.require("../../jsenv.config.js")
-
+const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const metaDescription = {
   "/*.js": {
     source: true,
   },
   "/subfolder/": { source: true },
 }
-
 const filenameRelativeArray = await selectAllFileInsideFolder({
-  pathname: `${projectFolder}/test/selectAllFileInsideFolder/folder`,
+  pathname: `${testFolder}/folder`,
   metaDescription,
   predicate: ({ source }) => source,
   transformFile: ({ filenameRelative }) => filenameRelative,

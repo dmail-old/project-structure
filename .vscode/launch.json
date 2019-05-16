@@ -21,14 +21,6 @@
       ]
       // "trace": true,
     },
-    // this debug configuration is supposed to work
-    // but in practice it often fails (vscode waits and do nothing).
-    // it seems vscode fails to auto attach the child process
-    // and you end up having to restart vscode or retry multiple times until
-    // it works.
-    // It is very annoying and I have no clue where it comes from.
-    // It should be reproductible by debugging a node script
-    // spawning a child process.
     {
       "name": "jsenv-node",
       "type": "node",

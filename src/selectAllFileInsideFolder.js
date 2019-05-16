@@ -1,5 +1,6 @@
-import fs from "fs"
+import { readdir, lstat } from "fs"
 import { createCancellationToken, createOperation } from "@dmail/cancellation"
+import { pathnameToFilename } from "@dmail/helper"
 import { pathnameCanContainsMetaMatching } from "./pathnameCanContainsMetaMatching.js"
 import { pathnameToMeta } from "./pathnameToMeta.js"
 
@@ -22,36 +23,42 @@ export const selectAllFileInsideFolder = async ({
 
   const results = []
 
-  const visitFolder = async (folder) => {
+  const visitFolder = async (folderPathname) => {
+    const folderFilename = pathnameToFilename(folderPathname)
+
     const folderBasenameArray = await createOperation({
       cancellationToken,
-      start: () => readDirectory(folder),
+      start: () => readDirectory(folderFilename),
     })
 
     await Promise.all(
       folderBasenameArray.map(async (basename) => {
-        const pathname = `${folder}/${basename}`
-        const pathnameRelative = pathnameToRelativePathname(pathname, rootFolderPathname)
+        const folderEntryPathname = `${folderPathname}/${basename}`
+        const folderEntryFilename = pathnameToFilename(folderEntryPathname)
+        const folderEntryPathnameRelative = pathnameToRelativePathname(
+          folderEntryPathname,
+          rootFolderPathname,
+        )
         const lstat = await createOperation({
           cancellationToken,
-          start: () => readLStat(pathname),
+          start: () => readLStat(folderEntryFilename),
         })
 
         if (lstat.isDirectory()) {
           if (
             !pathnameCanContainsMetaMatching({
-              pathname: pathnameRelative,
+              pathname: folderEntryPathnameRelative,
               metaDescription,
               predicate,
             })
           )
             return null
 
-          return visitFolder(pathname)
+          return visitFolder(folderEntryPathname)
         }
 
         if (lstat.isFile()) {
-          const meta = pathnameToMeta({ pathname: pathnameRelative, metaDescription })
+          const meta = pathnameToMeta({ pathname: folderEntryPathnameRelative, metaDescription })
           if (!predicate(meta)) {
             return null
           }
@@ -59,7 +66,11 @@ export const selectAllFileInsideFolder = async ({
           const result = await createOperation({
             cancellationToken,
             start: () =>
-              transformFile({ filenameRelative: pathnameRelative.slice(1), meta, lstat }),
+              transformFile({
+                filenameRelative: folderEntryPathnameRelative.slice(1),
+                meta,
+                lstat,
+              }),
           })
           results.push(result)
           return null
@@ -87,7 +98,7 @@ const pathnameToRelativePathname = (pathname, parentPathname) => {
 
 const readDirectory = (pathname) =>
   new Promise((resolve, reject) => {
-    fs.readdir(pathname, (error, names) => {
+    readdir(pathname, (error, names) => {
       if (error) {
         reject(error)
       } else {
@@ -98,7 +109,7 @@ const readDirectory = (pathname) =>
 
 const readLStat = (pathname) =>
   new Promise((resolve, reject) => {
-    fs.lstat(pathname, (error, stat) => {
+    lstat(pathname, (error, stat) => {
       if (error) {
         reject(error)
       } else {
