@@ -1,6 +1,6 @@
 import { sep } from "path"
+import { importMetaURLToFolderPath } from "@jsenv/operating-system-path"
 import { assert } from "@dmail/assert"
-import { importMetaURLToFolderPath } from "../../src/operating-system-path.js"
 import { selectAllFileInsideFolder } from "../../index.js"
 
 const testFolderPath = importMetaURLToFolderPath(import.meta.url)

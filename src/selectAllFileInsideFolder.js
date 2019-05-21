@@ -1,10 +1,10 @@
 import { readdir, lstat } from "fs"
-import { createCancellationToken, createOperation } from "@dmail/cancellation"
 import {
   operatingSystemPathToPathname,
   pathnameToOperatingSystemPath,
   pathnameToRelativePathname,
-} from "./operating-system-path.js"
+} from "@jsenv/operating-system-path"
+import { createCancellationToken, createOperation } from "@dmail/cancellation"
 import { pathnameCanContainsMetaMatching } from "./pathnameCanContainsMetaMatching.js"
 import { pathnameToMeta } from "./pathnameToMeta.js"
 
