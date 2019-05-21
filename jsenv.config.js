@@ -1,2 +1,2 @@
-const projectFolder = __dirname
-exports.projectFolder = projectFolder
+const projectPath = __dirname
+exports.projectPath = projectPath
