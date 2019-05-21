@@ -1,6 +1,6 @@
 {
   "name": "@dmail/project-structure",
-  "version": "3.4.0",
+  "version": "4.0.0",
   "licence": "MIT",
   "repository": {
     "type": "git",
@@ -17,8 +17,7 @@
     "/dist/"
   ],
   "dependencies": {
-    "@dmail/cancellation": "2.1.0",
-    "@dmail/helper": "2.2.0"
+    "@dmail/cancellation": "2.1.0"
   },
   "devDependencies": {
     "@jsenv/core": "5.30.0",

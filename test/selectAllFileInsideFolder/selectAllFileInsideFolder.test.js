@@ -1,22 +1,23 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
+import { sep } from "path"
 import { assert } from "@dmail/assert"
+import { importMetaURLToFolderPath } from "../../src/operating-system-path.js"
 import { selectAllFileInsideFolder } from "../../index.js"
 
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
+const testFolderPath = importMetaURLToFolderPath(import.meta.url)
 const metaDescription = {
   "/*.js": {
     source: true,
   },
   "/subfolder/": { source: true },
 }
-const filenameRelativeArray = await selectAllFileInsideFolder({
-  pathname: `${testFolder}/folder`,
+const relativePathArray = await selectAllFileInsideFolder({
+  folderPath: `${testFolderPath}${sep}folder`,
   metaDescription,
   predicate: ({ source }) => source,
-  transformFile: ({ filenameRelative }) => filenameRelative,
+  transformFile: ({ relativePath }) => relativePath,
 })
-const actual = filenameRelativeArray.sort()
-const expected = ["a.js", "b.js", "subfolder/c.js"]
+const actual = relativePathArray.sort()
+const expected = ["/a.js", "/b.js", "/subfolder/c.js"]
 
 assert({
   actual,

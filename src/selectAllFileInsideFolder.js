@@ -1,19 +1,22 @@
 import { readdir, lstat } from "fs"
 import { createCancellationToken, createOperation } from "@dmail/cancellation"
-import { pathnameToFilename } from "@dmail/helper"
+import {
+  operatingSystemPathToPathname,
+  pathnameToOperatingSystemPath,
+  pathnameToRelativePathname,
+} from "./operating-system-path.js"
 import { pathnameCanContainsMetaMatching } from "./pathnameCanContainsMetaMatching.js"
 import { pathnameToMeta } from "./pathnameToMeta.js"
 
-// when using node 10.0 consider to convert this to async generator ?
 export const selectAllFileInsideFolder = async ({
   cancellationToken = createCancellationToken(),
-  pathname: rootFolderPathname,
+  folderPath,
   metaDescription,
   predicate,
   transformFile = (file) => file,
 }) => {
-  if (typeof rootFolderPathname !== "string")
-    throw new TypeError(`pathname must be a string, got ${rootFolderPathname}`)
+  if (typeof folderPath !== "string")
+    throw new TypeError(`folderPath must be a string, got ${folderPath}`)
   if (typeof metaDescription !== "object")
     throw new TypeError(`metaDescription must be a object, got ${metaDescription}`)
   if (typeof predicate !== "function")
@@ -22,32 +25,32 @@ export const selectAllFileInsideFolder = async ({
     throw new TypeError(`transformFile must be a function, got ${transformFile}`)
 
   const results = []
-
+  const rootFolderPathname = operatingSystemPathToPathname(folderPath)
   const visitFolder = async (folderPathname) => {
-    const folderFilename = pathnameToFilename(folderPathname)
+    const folderPath = pathnameToOperatingSystemPath(folderPathname)
 
     const folderBasenameArray = await createOperation({
       cancellationToken,
-      start: () => readDirectory(folderFilename),
+      start: () => readDirectory(folderPath),
     })
 
     await Promise.all(
       folderBasenameArray.map(async (basename) => {
         const folderEntryPathname = `${folderPathname}/${basename}`
-        const folderEntryFilename = pathnameToFilename(folderEntryPathname)
-        const folderEntryPathnameRelative = pathnameToRelativePathname(
+        const folderEntryPath = pathnameToOperatingSystemPath(folderEntryPathname)
+        const folderEntryRelativePath = pathnameToRelativePathname(
           folderEntryPathname,
           rootFolderPathname,
         )
         const lstat = await createOperation({
           cancellationToken,
-          start: () => readLStat(folderEntryFilename),
+          start: () => readLStat(folderEntryPath),
         })
 
         if (lstat.isDirectory()) {
           if (
             !pathnameCanContainsMetaMatching({
-              pathname: folderEntryPathnameRelative,
+              pathname: folderEntryRelativePath,
               metaDescription,
               predicate,
             })
@@ -58,7 +61,7 @@ export const selectAllFileInsideFolder = async ({
         }
 
         if (lstat.isFile()) {
-          const meta = pathnameToMeta({ pathname: folderEntryPathnameRelative, metaDescription })
+          const meta = pathnameToMeta({ pathname: folderEntryRelativePath, metaDescription })
           if (!predicate(meta)) {
             return null
           }
@@ -67,7 +70,7 @@ export const selectAllFileInsideFolder = async ({
             cancellationToken,
             start: () =>
               transformFile({
-                filenameRelative: folderEntryPathnameRelative.slice(1),
+                relativePath: folderEntryRelativePath,
                 meta,
                 lstat,
               }),
@@ -90,10 +93,6 @@ export const selectAllFileInsideFolder = async ({
   await visitFolder(rootFolderPathname)
 
   return results
-}
-
-const pathnameToRelativePathname = (pathname, parentPathname) => {
-  return pathname.slice(parentPathname.length)
 }
 
 const readDirectory = (pathname) =>
