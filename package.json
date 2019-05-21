@@ -1,6 +1,6 @@
 {
   "name": "@dmail/project-structure",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "licence": "MIT",
   "repository": {
     "type": "git",
@@ -23,7 +23,6 @@
   "devDependencies": {
     "@jsenv/core": "5.30.0",
     "@jsenv/node-module-import-map": "1.2.0",
-    "@jsenv/module-resolution": "2.3.0",
     "@jsenv/eslint-config": "8.0.0",
     "@jsenv/eslint-import-resolver": "4.6.0",
     "@jsenv/prettier-config": "1.0.0",
