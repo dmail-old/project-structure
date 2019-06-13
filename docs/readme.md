@@ -1,0 +1,1 @@
+- [https://dmail.github.io/project-structure/browser-example](https://dmail.github.io/project-structure/browser-example)
