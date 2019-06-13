@@ -36,13 +36,15 @@
   },
   "scripts": {
     "generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
+    "start-browser-explorer-server": "node ./script/start-browser-explorer-server/start-browser-explorer-server.js",
     "test": "node ./script/test/test.js",
     "eslint-check-project": "eslint .",
     "prettier-check-project": "node ./script/prettier-check-project/prettier-check-project.js",
     "generate-coverage": "node ./script/generate-coverage/generate-coverage.js",
     "upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
-    "bundle-node": "node ./script/bundle-node/bundle-node.js",
-    "dist": "npm run clean && npm run bundle-node",
+    "generate-global-bundle": "node ./script/generate-global-bundle/generate-global-bundle.js",
+		"generate-commonjs-bundle": "node ./script/generate-commonjs-bundle/generate-commonjs-bundle.js",
+    "dist": "npm run clean && npm run generate-global-bundle && npm run generate-commonjs-bundle",
     "clean": "rimraf dist && rimraf coverage",
     "reinstall": "npm run clean && rimraf node_modules && npm install",
     "prepublishOnly": "npm run dist"
