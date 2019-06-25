@@ -1,0 +1,109 @@
+<p>
+  A form to test <b>pathnameMatch</b> function from
+  <a href="https://github.com/dmail/project-structure"
+    >https://github.com/dmail/project-structure</a
+  >
+</p>
+
+<script src="https://unpkg.com/@dmail/project-structure@5.0.0/dist/global/main.js"></script>
+
+<details>
+  <summary>Details about the form below</summary>
+  <ul>
+    <li>submitting the form executes pathnameMatch({ pathname, pattern })</li>
+    <li>result will be displayed under run/reset buttons in plain text</li>
+  </ul>
+</details>
+<br />
+<form>
+  <fieldset>
+    <legend>pattern</legend>
+    <label> <input type="radio" name="pattern" value="/index.js" checked /> /index.js </label>
+    <br />
+    <label> <input type="radio" name="pattern" value="/*.js" /> /*.js </label>
+    <br />
+    <label> <input type="radio" name="pattern" value="/**/*.js" /> /**/*.js </label>
+    <br />
+    <label>
+      <input type="radio" name="pattern" value="" />
+      <input type="text" />
+      <script>
+        ;(() => {
+          const label = document.currentScript.parentNode
+          const radioInput = label.querySelector('input[type="radio"]')
+          const textInput = label.querySelector('input[type="text"]')
+
+          textInput.onclick = () => {
+            radioInput.checked = true
+          }
+          textInput.oninput = () => {
+            radioInput.value = textInput.value
+          }
+        })()
+      </script>
+    </label>
+  </fieldset>
+  <br />
+  <fieldset>
+    <legend>pathname</legend>
+    <label> <input type="radio" name="pathname" value="/index.js" checked /> /index.js </label>
+    <br />
+    <label> <input type="radio" name="pathname" value="/src/file.js" /> /src/file.js </label>
+    <br />
+    <label>
+      <input type="radio" name="pathname" value="/src/folder/foo.js" /> /src/folder/foo.js
+    </label>
+    <br />
+    <label>
+      <input type="radio" name="pathname" value="" />
+      <input type="text" />
+      <script>
+        ;(() => {
+          const label = document.currentScript.parentNode
+          const radioInput = label.querySelector('input[type="radio"]')
+          const textInput = label.querySelector('input[type="text"]')
+
+          textInput.onclick = () => {
+            radioInput.checked = true
+          }
+          textInput.oninput = () => {
+            radioInput.value = textInput.value
+          }
+        })()
+      </script>
+    </label>
+  </fieldset>
+  <br />
+  <input type="submit" value="run" />
+  <input type="reset" value="reset" />
+</form>
+
+<script>
+  const form = document.currentScript.previousElementSibling
+  form.onsubmit = (submitEvent) => {
+    submitEvent.preventDefault()
+
+    const patternInput = form.elements.pattern
+    const patternInputValue = patternInput.value
+    const pattern = patternInputValue
+
+    const pathnameInput = form.elements.pathname
+    const pathnameInputValue = pathnameInput.value
+    const pathname = pathnameInputValue
+
+    const { pathnameMatch } = window.__dmail_project_structure__
+    try {
+      const match = pathnameMatch({ pattern, pathname })
+      document.querySelector("#result").innerHTML = match.matched
+        ? `match success`
+        : `match failure at ${match.pathnameIndex}`
+    } catch (e) {
+      document.querySelector("#result").innerHTML = e.stack
+    }
+  }
+  form.onreset = () => {
+    document.querySelector("#result").innerHTML = ""
+  }
+</script>
+
+<pre id="result"></pre>

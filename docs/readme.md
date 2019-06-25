@@ -1,1 +1,1 @@
-- [https://dmail.github.io/project-structure/browser-example](https://dmail.github.io/project-structure/browser-example)
+- [browser-interactive-example](https://dmail.github.io/project-structure/browser-interactive-example.html)

@@ -30,4 +30,4 @@ pathnameToMeta({ pathname: "/file.json", metaDescription }) // { extension: "jso
 ## Interactive example
 
 You can test if a pathname matches a pattern at the following url:
-https://dmail.github.io/project-structure/browser-example
+https://dmail.github.io/project-structure/browser-interactive-example.html
