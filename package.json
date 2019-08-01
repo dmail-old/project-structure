@@ -37,6 +37,7 @@
     "@jsenv/exploring-server": "1.13.0",
     "@jsenv/core": "5.122.0",
     "@jsenv/testing": "1.20.0",
+    "@jsenv/chromium-launcher": "1.15.0",
     "@jsenv/node-launcher": "1.14.0",
     "@jsenv/codecov-upload": "1.6.0",
     "@jsenv/bundling": "1.12.0",
