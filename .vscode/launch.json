@@ -35,7 +35,8 @@
       "smartStep": true,
       "skipFiles": [
         // force-multiline
-        "node_modules/**",
+        // "node_modules/**",
+        "node_modules/@babel/template/**",
         "<node_internals>/**/*.js"
       ]
     }

@@ -23,3 +23,27 @@ const metaDescription = {
   const expected = { whatever: false }
   assert({ actual, expected })
 }
+
+{
+  const actual = pathnameToMeta({
+    pathname: "/file.js",
+    metaDescription: {
+      "/**/*": { whatever: false },
+      "/*": { whatever: true },
+    },
+  })
+  const expected = { whatever: true }
+  assert({ actual, expected })
+}
+
+{
+  const actual = pathnameToMeta({
+    pathname: "/.git/file.js",
+    metaDescription: {
+      "/**/*": { whatever: false },
+      "/*": { whatever: true },
+    },
+  })
+  const expected = { whatever: false }
+  assert({ actual, expected })
+}

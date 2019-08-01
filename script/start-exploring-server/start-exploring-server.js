@@ -1,4 +1,4 @@
-const { startExploringServer } = require("@jsenv/core")
+const { startExploringServer } = require("@jsenv/exploring-server")
 const { projectPath } = require("../../jsenv.config.js")
 
 startExploringServer({
